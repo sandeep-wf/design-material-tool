@@ -95,4 +95,3 @@ elif st.session_state.current_screen == 'Cart Management':
         if st.button("Clear Cart"): 
             st.session_state.cart = {}
             st.rerun()
-"
