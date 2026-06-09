@@ -10,8 +10,8 @@ st.set_page_config(page_title='Wakefit Material Tool', layout='wide', page_icon=
 # Custom CSS for UI Density and Hardware Acceleration
 st.markdown(f'''<style>
     .stApp {{ background-color: #FDFDFD; }}
-    .stButton>button { background-color: {W_ORANGE}; color: white; border-radius: 4px; border: none; }
-    .stButton>button:hover { border: 1px solid {W_ORANGE}; color: {W_ORANGE}; }
+    .stButton>button {{ background-color: {W_ORANGE}; color: white; border-radius: 4px; border: none; }}
+    .stButton>button:hover {{ border: 1px solid {W_ORANGE}; color: {W_ORANGE}; }}
     .stMainView {{ will-change: transform; }}
     h1 {{ font-size: 1.2rem !important; }}
     h2 {{ font-size: 1.0rem !important; }}
