@@ -10,8 +10,8 @@ st.set_page_config(page_title='Wakefit Design Tool', layout='wide', page_icon='ð
 # Inject CSS with double curly braces for CSS properties and brand variable
 st.markdown(f'''<style>
     .stApp {{ background-color: #FDFDFD; }}
-    .stButton>button { background-color: {W_ORANGE}; color: white; border-radius: 4px; border: none; }
-    .stButton>button:hover { border: 1px solid {W_ORANGE}; color: {W_ORANGE}; }
+    .stButton>button {{ background-color: #FF6600 ; color: white; border-radius: 4px; border: none; }}
+    .stButton>button:hover {{ border: 1px solid #FF6600; color: #FF6600; }}
     .stMainView {{ will-change: transform; }}
     h1, h2, h3 {{ color: #333333; font-family: Segoe UI, sans-serif; }}
 </style>''', unsafe_allow_html=True)
