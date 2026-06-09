@@ -3,16 +3,20 @@ import pandas as pd
 
 # --- Wakefit Branding Configuration ---
 W_ORANGE = '#FF6600'
-W_LOGO = 'wakefit logo.png' # Using local file
+W_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'
 
 st.set_page_config(page_title='Wakefit Design Tool', layout='wide', page_icon='🛋️')
 
-# Custom CSS for Wakefit Identity
+# Optimized CSS for branding and space efficiency (Header sizes reduced by 50%)
 st.markdown(f'''<style>
     .stApp {{ background-color: #FDFDFD; }}
-    .stButton>button {{ background-color: #FF6600; color: white; border-radius: 4px; border: none; }}
-    .stButton>button:hover {{ border: 1px solid #FF6600; color: #FF6600; }}
+    .stButton>button {{ background-color: {W_ORANGE}; color: white; border-radius: 4px; border: none; }}
+    .stButton>button:hover {{ border: 1px solid {W_ORANGE}; color: {W_ORANGE}; }}
     .stMainView {{ will-change: transform; }}
+    /* Font size reductions for headers */
+    h1 {{ font-size: 1.1rem !important; }}
+    h2 {{ font-size: 0.9rem !important; }}
+    h3 {{ font-size: 0.8rem !important; }}
     h1, h2, h3 {{ color: #333333; font-family: Segoe UI, sans-serif; }}
 </style>''', unsafe_allow_html=True)
 
@@ -48,7 +52,7 @@ if st.session_state.screen == 'Design Selection':
 elif st.session_state.screen == 'Material Selection':
     d = st.session_state.sel_design
     st.title(f'📦 Materials: {d}')
-    if st.button('🏠 Back to Search', use_container_width=True): nav('Design Selection')
+    if st.button('🔙 Back to Search'): nav('Design Selection')
     m = pd.merge(mappings_df[mappings_df['design_code']==d], materials_df, left_on='material_code', right_on='material_crm_code')
     for i, r in m.iterrows():
         with st.container(border=True):
@@ -59,12 +63,12 @@ elif st.session_state.screen == 'Material Selection':
                 cd = r['material_crm_code']
                 if cd in st.session_state.cart: st.session_state.cart[cd]['quantity'] += q
                 else: st.session_state.cart[cd] = {'name':r['material_name'], 'price':r['price'], 'quantity':q}
-                st.toast('✅ Added!')
+                st.toast(f"✅ Added {r['material_name']}!")
 
 elif st.session_state.screen == 'Cart Management':
     st.title('🛒 Cart Management')
     if st.button('➕ Add More Items'): nav('Design Selection')
-    if not st.session_state.cart: st.info('Empty')
+    if not st.session_state.cart: st.info('Your cart is empty.')
     else:
         tot = 0
         for c, itm in list(st.session_state.cart.items()):
