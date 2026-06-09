@@ -1,16 +1,16 @@
 import streamlit as st
 import pandas as pd
 
-# --- Wakefit Branding ---
+# --- Wakefit Branding Configuration ---
 W_ORANGE = '#FF6600'
-W_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'
+W_LOGO = 'wakefit logo.png' # Using local file
 
 st.set_page_config(page_title='Wakefit Design Tool', layout='wide', page_icon='🛋️')
 
-# Inject CSS with double curly braces for CSS properties and brand variable
+# Custom CSS for Wakefit Identity
 st.markdown(f'''<style>
     .stApp {{ background-color: #FDFDFD; }}
-    .stButton>button {{ background-color: #FF6600 ; color: white; border-radius: 4px; border: none; }}
+    .stButton>button {{ background-color: #FF6600; color: white; border-radius: 4px; border: none; }}
     .stButton>button:hover {{ border: 1px solid #FF6600; color: #FF6600; }}
     .stMainView {{ will-change: transform; }}
     h1, h2, h3 {{ color: #333333; font-family: Segoe UI, sans-serif; }}
@@ -33,14 +33,14 @@ def nav(s): st.session_state.screen = s; st.rerun()
 st.sidebar.image(W_LOGO, use_container_width=True)
 st.sidebar.title('Navigation')
 cnt = sum(i['quantity'] for i in st.session_state.cart.values())
-if st.sidebar.button(f'🛒 Cart ({cnt})', use_container_width=True): nav('Cart Management')
-if st.sidebar.button('🔍 Search', use_container_width=True): nav('Design Selection')
+if st.sidebar.button(f'🛒 View Cart ({cnt})', use_container_width=True): nav('Cart Management')
+if st.sidebar.button('🔍 Start New Search', use_container_width=True): nav('Design Selection')
 
 if st.session_state.screen == 'Design Selection':
     st.title('🏠 Design Selection')
     if designs_df is not None:
         opts = designs_df.apply(lambda x: f"{x['design_name']} ({x['design_code']})", axis=1).tolist()
-        sel = st.selectbox('Select Design:', opts)
+        sel = st.selectbox('Select Wakefit Design:', opts)
         if st.button('Load Materials', type='primary'):
             st.session_state.sel_design = sel.split('(')[-1].strip(')')
             nav('Material Selection')
@@ -48,7 +48,7 @@ if st.session_state.screen == 'Design Selection':
 elif st.session_state.screen == 'Material Selection':
     d = st.session_state.sel_design
     st.title(f'📦 Materials: {d}')
-    if st.button('🔙 Back'): nav('Design Selection')
+    if st.button('🏠 Back to Search', use_container_width=True): nav('Design Selection')
     m = pd.merge(mappings_df[mappings_df['design_code']==d], materials_df, left_on='material_code', right_on='material_crm_code')
     for i, r in m.iterrows():
         with st.container(border=True):
@@ -59,10 +59,11 @@ elif st.session_state.screen == 'Material Selection':
                 cd = r['material_crm_code']
                 if cd in st.session_state.cart: st.session_state.cart[cd]['quantity'] += q
                 else: st.session_state.cart[cd] = {'name':r['material_name'], 'price':r['price'], 'quantity':q}
-                st.toast('Added!')
+                st.toast('✅ Added!')
 
 elif st.session_state.screen == 'Cart Management':
-    st.title('🛒 Cart')
+    st.title('🛒 Cart Management')
+    if st.button('➕ Add More Items'): nav('Design Selection')
     if not st.session_state.cart: st.info('Empty')
     else:
         tot = 0
@@ -75,4 +76,4 @@ elif st.session_state.screen == 'Cart Management':
                 cl[2].write(f'₹{sub:,.2f}')
                 if cl[3].button('🗑️', key=f'd{c}'): del st.session_state.cart[c]; st.rerun()
         st.divider(); st.subheader(f'Total Estimate: ₹{tot:,.2f}')
-        if st.button('Clear'): st.session_state.cart = {}; st.rerun()
+        if st.button('Clear All', type='secondary'): st.session_state.cart = {}; st.rerun()
