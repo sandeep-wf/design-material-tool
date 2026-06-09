@@ -44,7 +44,7 @@ if st.sidebar.button("🔍 Search Designs", use_container_width=True):
 if st.session_state.current_screen == 'Design Selection':
     st.title("Design Selection")
     if designs_df is not None:
-        options = designs_df.apply(lambda x: f\"{x['design_name']} ({x['design_code']})\", axis=1).tolist()
+        options = designs_df.apply(lambda x: f"{x['design_name']} ({x['design_code']})", axis=1).tolist()
         sel = st.selectbox("Search for a design:", options)
         if st.button("Proceed to Materials", type='primary'):
             st.session_state.selected_design = sel.split('(')[-1].strip(')')
@@ -65,14 +65,16 @@ elif st.session_state.current_screen == 'Material Selection':
                 st.markdown(f"### {row['material_name']}")
                 st.markdown(f"**Price:** ₹{row['price']:,}")
             with c2:
-                qty = st.number_input("Qty", 1, 100, 1, key=f\"q_{idx}\")
+                qty = st.number_input("Qty", 1, 100, 1, key=f"q_{idx}")
             with c3:
                 st.write("")
-                if st.button("Add to Cart", key=f\"b_{idx}\", type='primary', use_container_width=True):
+                if st.button("Add", key=f"b_{idx}", type='primary', use_container_width=True):
                     code = row['material_crm_code']
-                    if code in st.session_state.cart: st.session_state.cart[code]['quantity'] += qty
-                    else: st.session_state.cart[code] = {'name': row['material_name'], 'price': row['price'], 'quantity': qty}
-                    st.toast(f\"✅ Added {row['material_name']}!\")
+                    if code in st.session_state.cart:
+                        st.session_state.cart[code]['quantity'] += qty
+                    else:
+                        st.session_state.cart[code] = {'name': row['material_name'], 'price': row['price'], 'quantity': qty}
+                    st.toast(f"✅ Added {row['material_name']}!")
 
 # --- Screen 3: Cart Management ---
 elif st.session_state.current_screen == 'Cart Management':
@@ -87,13 +89,13 @@ elif st.session_state.current_screen == 'Cart Management':
             with st.container(border=True):
                 cols = st.columns([3, 1, 1, 0.5])
                 cols[0].write(item['name'])
-                item['quantity'] = cols[1].number_input("Qty", 1, 1000, item['quantity'], key=f\"edit_{c}\")
+                item['quantity'] = cols[1].number_input("Qty", 1, 1000, item['quantity'], key=f"edit_{c}")
                 cols[2].write(f"₹{sub:,.2f}")
-                if cols[3].button("🗑️", key=f\"del_{c}\"): 
+                if cols[3].button("🗑️", key=f"del_{c}"):
                     del st.session_state.cart[c]
                     st.rerun()
         st.divider()
         st.header(f"Grand Total: ₹{total:,.2f}")
-        if st.button("Clear All", type='secondary'): 
+        if st.button("Clear All", type='secondary'):
             st.session_state.cart = {}
-            st.rerun()"
+            st.rerun()
