@@ -1,117 +1,41 @@
 import streamlit as st
 import pandas as pd
 
-# --- PWA & iOS Optimization ---
-import streamlit.components.v1 as components
-
-# --- PWA & iOS Optimization ---
-import streamlit.components.v1 as components
-
-st.markdown(f"""
-<link rel='manifest' href='PLACEHOLDER_MANIFEST_URL'>
-<meta name='apple-mobile-web-app-capable' content='yes'>
-<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
-<meta name='apple-mobile-web-app-title' content='Wakefit Tool'>
-<link rel='apple-touch-icon' href='https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'>
-""", unsafe_allow_html=True)
-
-components.html(
-    f"""
-    <script>
-        if ('serviceWorker' in navigator) {{ 
-            window.addEventListener('load', function() {{ 
-                navigator.serviceWorker.register('PLACEHOLDER_SW_URL');
-            }});
-        }}
-    </script>
-    """,
-    height=0,
-)
-
-st.markdown(f"""
-<link rel='manifest' href='PLACEHOLDER_MANIFEST_URL'>
-<meta name='apple-mobile-web-app-capable' content='yes'>
-<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
-<meta name='apple-mobile-web-app-title' content='Wakefit Tool'>
-<link rel='apple-touch-icon' href='https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'>
-""", unsafe_allow_html=True)
-
-components.html(
-    f"""
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('PLACEHOLDER_SW_URL');
-            });
-        }
-    </script>
-    """,
-    height=0,
-)
-
-# --- PWA & IOS Optimization ---
-pwa_meta = f"""
-<link rel='manifest' href='PLACEHOLDER_MANIFEST_URL'>
-<meta name='apple-mobile-web-app-capable' content='yes'>
-<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
-<meta name='apple-mobile-web-app-title' content='Wakefit Tool'>
-<link rel='apple-touch-icon' href='https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'>
-<script>
-  if ('serviceWorker' in navigator) {{ 
-    window.addEventListener('load', function() {{ 
-      navigator.serviceWorker.register('PLACEHOLDER_SW_URL');
-    }});
-  }}
-</script>
-"""
-st.markdown(pwa_meta, unsafe_allow_html=True)
-
-# --- Wakefit Branding ---
+# --- Wakefit Branding Configuration ---
 W_ORANGE = '#FF6600'
-W_LOGO = 'wakefit logo.png'
+W_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'
 
 st.set_page_config(page_title='Wakefit Material Tool', layout='wide', page_icon='🛋️')
 
-# --- PWA Manifest Integration ---
-
-pwa_meta = f"""
-<link rel='manifest' href='PLACEHOLDER_MANIFEST_URL'>
-<meta name='apple-mobile-web-app-capable' content='yes'>
-<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
-<meta name='apple-mobile-web-app-title' content='Wakefit Tool'>
-<link rel='apple-touch-icon' href='https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'>
-<script>
-  if ('serviceWorker' in navigator) { 
-    navigator.serviceWorker.register('PLACEHOLDER_SW_URL');
-  }
-</script>
-"""
-st.markdown(pwa_meta, unsafe_allow_html=True)
-# REPLACE THESE WITH YOUR GITHUB RAW URLs
+# --- PWA Infrastructure (Replace placeholders with final URLs) ---
 MANIFEST_URL = 'https://raw.githubusercontent.com/sandeep-wf/design-material-tool/refs/heads/main/manifest.json'
 SW_URL = 'https://raw.githubusercontent.com/sandeep-wf/design-material-tool/refs/heads/main/sw.js'
 
-pwa_header = f"""
+pwa_meta = f"""
 <link rel='manifest' href='{MANIFEST_URL}'>
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
+<meta name='apple-mobile-web-app-title' content='Wakefit Tool'>
+<link rel='apple-touch-icon' href='{W_LOGO}'>
 <script>
-  if ('serviceWorker' in navigator) {{ 
-    window.addEventListener('load', function() {{ 
+  if ('serviceWorker' in navigator) {{{{ 
+    window.addEventListener('load', function() {{{{ 
       navigator.serviceWorker.register('{SW_URL}');
-    }});
-  }}
+    }}}});
+  }}}}
 </script>
 """
-st.markdown(pwa_header, unsafe_allow_html=True)
+st.markdown(pwa_meta, unsafe_allow_html=True)
 
-# Custom CSS for UI Density and Hardware Acceleration
+# --- Branded CSS & Layout Optimization ---
 css = f"""<style>
-    .stApp {{ background-color: #FDFDFD; }}
+    .stApp {{{{ background-color: #FDFDFD; }}}}
     .stButton>button {{ background-color: {W_ORANGE}; color: white; border-radius: 4px; border: none; }}
     .stButton>button:hover {{ border: 1px solid {W_ORANGE}; color: {W_ORANGE}; }}
-    .stMainView {{ will-change: transform; }}
-    h1 {{ font-size: 1.1rem !important; }}
-    h2 {{ font-size: 0.9rem !important; }}
-    h3 {{ font-size: 0.8rem !important; }}
+    .stMainView {{{{ will-change: transform; }}}}
+    h1 {{{{ font-size: 1.1rem !important; }}}}
+    h2 {{{{ font-size: 0.9rem !important; }}}}
+    h3 {{{{ font-size: 0.8rem !important; }}}}
 </style>"""
 st.markdown(css, unsafe_allow_html=True)
 
@@ -129,11 +53,11 @@ if 'sel_design' not in st.session_state: st.session_state.sel_design = None
 
 def nav(s): st.session_state.screen = s; st.rerun()
 
-try: st.sidebar.image(W_LOGO, use_container_width=True)
-except: st.sidebar.warning('Logo not found')
+st.sidebar.image(W_LOGO, use_container_width=True)
+st.sidebar.title('Navigation')
 cnt = sum(i['quantity'] for i in st.session_state.cart.values())
 if st.sidebar.button(f'🛒 View Cart ({cnt})', use_container_width=True): nav('Cart Management')
-if st.sidebar.button('🔍 New Search', use_container_width=True): nav('Design Selection')
+if st.sidebar.button('🔍 Start New Search', use_container_width=True): nav('Design Selection')
 
 if st.session_state.screen == 'Design Selection':
     st.title('🏠 Select Design')
@@ -146,22 +70,19 @@ if st.session_state.screen == 'Design Selection':
 
 elif st.session_state.screen == 'Material Selection':
     d = st.session_state.sel_design
-    col_title, col_cart = st.columns([5, 1])
-    with col_title: st.title(f'📦 Materials: {d}')
-    with col_cart: 
-        if st.button(f'🛒 ({cnt})'): nav('Cart Management')
-
+    st.title(f'📦 Materials for: {d}')
+    if st.button('🔙 Back'): nav('Design Selection')
     m = pd.merge(mappings_df[mappings_df['design_code']==d], materials_df, left_on='material_code', right_on='material_crm_code')
     for i, r in m.iterrows():
         with st.container(border=True):
             c1, c2, c3 = st.columns([3,1,1])
-            c1.markdown(f"**{r['material_name']}**"); c1.write(f"₹{r['price']:,}")
+            c1.markdown(f"**{r['material_name']}**"); c1.write(f"Price: ₹{r['price']:,}")
             q = c2.number_input('Qty', 1, 100, 1, key=f'q{i}', label_visibility='collapsed')
             if c3.button('Add', key=f'b{i}', type='primary', use_container_width=True):
                 cd = r['material_crm_code']
                 if cd in st.session_state.cart: st.session_state.cart[cd]['quantity'] += q
                 else: st.session_state.cart[cd] = {'name':r['material_name'], 'price':r['price'], 'quantity':q}
-                st.toast('Added!')
+                st.toast('Added to Cart!')
 
 elif st.session_state.screen == 'Cart Management':
     st.title('🛒 Cart Management')
@@ -177,4 +98,4 @@ elif st.session_state.screen == 'Cart Management':
                 cols[2].write(f"₹{sub:,.2f}")
                 if cols[3].button('🗑️', key=f'd{c}'): del st.session_state.cart[c]; st.rerun()
         st.divider(); st.subheader(f'Total Estimate: ₹{tot:,.2f}')
-        if st.button('Clear All', type='secondary'): st.session_state.cart = {}; st.rerun()
+        if st.button('Clear All Items', type='secondary'): st.session_state.cart = {}; st.rerun()
