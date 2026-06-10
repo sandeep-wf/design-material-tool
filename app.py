@@ -21,6 +21,7 @@ st.markdown(pwa_meta, unsafe_allow_html=True)
 # --- Wakefit Branding ---
 W_ORANGE = '#FF6600'
 W_LOGO = 'wakefit logo.png'
+PLACEHOLDER_SW_URL = 'https://raw.githubusercontent.com/sandeep-wf/design-material-tool/refs/heads/main/sw.js'
 
 st.set_page_config(page_title='Wakefit Material Tool', layout='wide', page_icon='🛋️')
 
