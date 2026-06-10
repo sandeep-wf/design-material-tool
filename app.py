@@ -38,7 +38,7 @@ css = f"""<style>
     h3 {{{{ font-size: 0.8rem !important; }}}}
 # --- Enhanced PWA, Branding & Splash Screen ---
 st.markdown(f"""
-<link rel='manifest' href='PLACEHOLDER_MANIFEST_URL'>
+<link rel='manifest' href='https://raw.githubusercontent.com/sandeep-wf/design-material-tool/refs/heads/main/manifest.json'>
 <meta name='apple-mobile-web-app-capable' content='yes'>
 <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
 <meta name='apple-mobile-web-app-title' content='Wakefit Tool'>
