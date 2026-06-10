@@ -36,6 +36,26 @@ css = f"""<style>
     h1 {{{{ font-size: 1.1rem !important; }}}}
     h2 {{{{ font-size: 0.9rem !important; }}}}
     h3 {{{{ font-size: 0.8rem !important; }}}}
+# --- Enhanced PWA, Branding & Splash Screen ---
+st.markdown(f"""
+<link rel='manifest' href='PLACEHOLDER_MANIFEST_URL'>
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
+<meta name='apple-mobile-web-app-title' content='Wakefit Tool'>
+
+<!-- Home Screen Icon -->
+<link rel='apple-touch-icon' href='https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'>
+
+<!-- Splash Screen (iOS) -->
+<link rel='apple-touch-startup-image' href='https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'>
+
+<style>
+    /* Hide Streamlit header to look more like a native app */
+    header {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
 </style>"""
 st.markdown(css, unsafe_allow_html=True)
 
