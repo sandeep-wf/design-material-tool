@@ -1,6 +1,6 @@
 {
     "name": "Wakefit Material Tool",
-    "short_name": "WakefitTool",
+    "short_name": "Wakefit",
     "description": "Internal Design-to-Material Selection Tool",
     "start_url": ".",
     "display": "standalone",
@@ -10,7 +10,14 @@
         {
             "src": "https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
         }
     ]
 }
