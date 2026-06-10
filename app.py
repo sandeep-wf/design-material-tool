@@ -1,6 +1,23 @@
 import streamlit as st
 import pandas as pd
 
+# --- PWA & IOS Optimization ---
+pwa_meta = f"""
+<link rel='manifest' href='PLACEHOLDER_MANIFEST_URL'>
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
+<meta name='apple-mobile-web-app-title' content='Wakefit Tool'>
+<link rel='apple-touch-icon' href='https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'>
+<script>
+  if ('serviceWorker' in navigator) {{ 
+    window.addEventListener('load', function() {{ 
+      navigator.serviceWorker.register('PLACEHOLDER_SW_URL');
+    }});
+  }}
+</script>
+"""
+st.markdown(pwa_meta, unsafe_allow_html=True)
+
 # --- Wakefit Branding ---
 W_ORANGE = '#FF6600'
 W_LOGO = 'wakefit logo.png'
