@@ -1,22 +1,40 @@
 import streamlit as st
 import pandas as pd
 
-# --- Wakefit Branding Configuration ---
+# --- Wakefit Branding ---
 W_ORANGE = '#FF6600'
 W_LOGO = 'wakefit logo.png'
 
 st.set_page_config(page_title='Wakefit Material Tool', layout='wide', page_icon='🛋️')
 
+# --- PWA Manifest Integration ---
+# REPLACE THESE WITH YOUR GITHUB RAW URLs
+MANIFEST_URL = 'https://raw.githubusercontent.com/sandeep-wf/design-material-tool/refs/heads/main/manifest.json'
+SW_URL = 'https://raw.githubusercontent.com/sandeep-wf/design-material-tool/refs/heads/main/sw.js'
+
+pwa_header = f"""
+<link rel='manifest' href='{MANIFEST_URL}'>
+<script>
+  if ('serviceWorker' in navigator) {{ 
+    window.addEventListener('load', function() {{ 
+      navigator.serviceWorker.register('{SW_URL}');
+    }});
+  }}
+</script>
+"""
+st.markdown(pwa_header, unsafe_allow_html=True)
+
 # Custom CSS for UI Density and Hardware Acceleration
-st.markdown(f'''<style>
+css = f"""<style>
     .stApp {{ background-color: #FDFDFD; }}
     .stButton>button {{ background-color: {W_ORANGE}; color: white; border-radius: 4px; border: none; }}
     .stButton>button:hover {{ border: 1px solid {W_ORANGE}; color: {W_ORANGE}; }}
     .stMainView {{ will-change: transform; }}
-    h1 {{ font-size: 1.2rem !important; }}
-    h2 {{ font-size: 1.0rem !important; }}
-    h3 {{ font-size: 0.9rem !important; }}
-</style>''', unsafe_allow_html=True)
+    h1 {{ font-size: 1.1rem !important; }}
+    h2 {{ font-size: 0.9rem !important; }}
+    h3 {{ font-size: 0.8rem !important; }}
+</style>"""
+st.markdown(css, unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False)
 def load_data():
@@ -32,13 +50,12 @@ if 'sel_design' not in st.session_state: st.session_state.sel_design = None
 
 def nav(s): st.session_state.screen = s; st.rerun()
 
-# --- Sidebar Navigation ---
-st.sidebar.image(W_LOGO, use_container_width=True)
+try: st.sidebar.image(W_LOGO, use_container_width=True)
+except: st.sidebar.warning('Logo not found')
 cnt = sum(i['quantity'] for i in st.session_state.cart.values())
 if st.sidebar.button(f'🛒 View Cart ({cnt})', use_container_width=True): nav('Cart Management')
 if st.sidebar.button('🔍 New Search', use_container_width=True): nav('Design Selection')
 
-# --- Screen 1: Design Selection ---
 if st.session_state.screen == 'Design Selection':
     st.title('🏠 Select Design')
     if designs_df is not None:
@@ -48,7 +65,6 @@ if st.session_state.screen == 'Design Selection':
             st.session_state.sel_design = sel.split('(')[-1].strip(')')
             nav('Material Selection')
 
-# --- Screen 2: Material Selection ---
 elif st.session_state.screen == 'Material Selection':
     d = st.session_state.sel_design
     col_title, col_cart = st.columns([5, 1])
@@ -68,7 +84,6 @@ elif st.session_state.screen == 'Material Selection':
                 else: st.session_state.cart[cd] = {'name':r['material_name'], 'price':r['price'], 'quantity':q}
                 st.toast('Added!')
 
-# --- Screen 3: Cart Management (Single-Line Layout) ---
 elif st.session_state.screen == 'Cart Management':
     st.title('🛒 Cart Management')
     if not st.session_state.cart: st.info('Cart is empty.')
@@ -77,7 +92,6 @@ elif st.session_state.screen == 'Cart Management':
         for c, itm in list(st.session_state.cart.items()):
             sub = itm['price'] * itm['quantity']; tot += sub
             with st.container(border=True):
-                # Space-optimized Single-line Cart Item
                 cols = st.columns([3, 1, 1, 0.5])
                 cols[0].write(f"**{itm['name']}**")
                 itm['quantity'] = cols[1].number_input('Qty', 1, 1000, itm['quantity'], key=f'e{c}', label_visibility='collapsed')
