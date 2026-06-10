@@ -4,6 +4,30 @@ import pandas as pd
 # --- PWA & iOS Optimization ---
 import streamlit.components.v1 as components
 
+# --- PWA & iOS Optimization ---
+import streamlit.components.v1 as components
+
+st.markdown(f"""
+<link rel='manifest' href='PLACEHOLDER_MANIFEST_URL'>
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
+<meta name='apple-mobile-web-app-title' content='Wakefit Tool'>
+<link rel='apple-touch-icon' href='https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'>
+""", unsafe_allow_html=True)
+
+components.html(
+    f"""
+    <script>
+        if ('serviceWorker' in navigator) {{ 
+            window.addEventListener('load', function() {{ 
+                navigator.serviceWorker.register('PLACEHOLDER_SW_URL');
+            }});
+        }}
+    </script>
+    """,
+    height=0,
+)
+
 st.markdown(f"""
 <link rel='manifest' href='PLACEHOLDER_MANIFEST_URL'>
 <meta name='apple-mobile-web-app-capable' content='yes'>
