@@ -8,6 +8,20 @@ W_LOGO = 'wakefit logo.png'
 st.set_page_config(page_title='Wakefit Material Tool', layout='wide', page_icon='🛋️')
 
 # --- PWA Manifest Integration ---
+
+pwa_meta = f"""
+<link rel='manifest' href='PLACEHOLDER_MANIFEST_URL'>
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
+<meta name='apple-mobile-web-app-title' content='Wakefit Tool'>
+<link rel='apple-touch-icon' href='https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'>
+<script>
+  if ('serviceWorker' in navigator) { 
+    navigator.serviceWorker.register('PLACEHOLDER_SW_URL');
+  }
+</script>
+"""
+st.markdown(pwa_meta, unsafe_allow_html=True)
 # REPLACE THESE WITH YOUR GITHUB RAW URLs
 MANIFEST_URL = 'https://raw.githubusercontent.com/sandeep-wf/design-material-tool/refs/heads/main/manifest.json'
 SW_URL = 'https://raw.githubusercontent.com/sandeep-wf/design-material-tool/refs/heads/main/sw.js'
