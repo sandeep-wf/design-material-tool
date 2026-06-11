@@ -83,7 +83,8 @@ elif st.session_state.screen == 'Cart Management':
             sub = itm['price'] * itm['quantity']
             tot += sub
             with st.container(border=True):
-                cols = st.columns([3, 1, 1, 0.5])
+                # Space-optimized Single-line Cart Item using tight column ratios
+                cols = st.columns([3.5, 1, 1, 0.5])
                 cols[0].write(f"**{itm['name']}**")
                 itm['quantity'] = cols[1].number_input('Qty', 1, 1000, itm['quantity'], key=f'e{c}', label_visibility='collapsed')
                 cols[2].write(f'₹{sub:,.2f}')
