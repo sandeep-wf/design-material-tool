@@ -24,4 +24,25 @@
     h1 { font-size: 1.2rem !important; }
     h2 { font-size: 1.0rem !important; }
     h3 { font-size: 0.9rem !important; }
+
+    /* --- Horizontal Cart Layout Optimization --- */
+    [data-testid="stHorizontalBlock"] {
+        align-items: center !important;
+    }
+
+    [data-testid="column"] {
+        min-width: fit-content !important;
+        flex: 1 1 auto !important;
+    }
+
+    /* Center the delete button vertically with input fields */
+    .stButton > button {
+        margin-top: 0 !important;
+        white-space: nowrap;
+    }
+
+    /* Ensure quantity input is compact */
+    div[data-testid="stNumberInput"] {
+        width: 80px !important;
+    }
 </style>
