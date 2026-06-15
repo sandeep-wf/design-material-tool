@@ -15,16 +15,16 @@ st.markdown(f'''<style>
     h1, h2, h3 {{ color: #333333; }}
     .stMainView {{ will-change: transform; }}
     /* Cart layout optimization for mobile */
-    @media (max-width: 768px) { 
+    @media (max-width: 768px) {{ 
         /* Target the container for each cart item row */
-        div[data-testid="stVerticalBlock"] > div > div[data-testid="stHorizontalBlock"] { 
+        div[data-testid="stVerticalBlock"] > div > div[data-testid="stHorizontalBlock"] {{ 
             flex-direction: row; /* Ensure horizontal layout */
             flex-wrap: nowrap;   /* Prevent wrapping to multiple lines */
             align-items: center; /* Vertically align content */
             gap: 0.25rem;        /* Reduce gap between columns */
-        }
+        }}
         /* Adjust columns within the cart item to be compact */
-        div[data-testid="stVerticalBlock"] > div > div[data-testid="stHorizontalBlock"] > div[data-testid="column"] { 
+        div[data-testid="stVerticalBlock"] > div > div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {{ 
             flex-basis: auto; /* Allow columns to determine their own size based on content */
             flex-grow: 1;     /* Allow columns to grow if space permits */
             flex-shrink: 1;   /* Allow columns to shrink if space is tight */
@@ -32,22 +32,22 @@ st.markdown(f'''<style>
             white-space: nowrap; /* Prevent text wrapping */
             overflow: hidden;    /* Hide overflowing text */
             text-overflow: ellipsis; /* Show ellipsis for truncated text */
-        }
+        }}
         /* Specific adjustments for number input */
-        div[data-testid="stNumberInput"] { 
+        div[data-testid="stNumberInput"] {{ 
             width: 50px !important; /* Make number input very compact */
             min-width: 50px !important;
-        }
+        }}
         /* Smaller font for all text within cart items */
-        div[data-testid="stVerticalBlock"] > div > div[data-testid="stHorizontalBlock"] * { 
+        div[data-testid="stVerticalBlock"] > div > div[data-testid="stHorizontalBlock"] * {{ 
             font-size: 0.75em !important; /* Smaller text for compactness */
-        }
+        }}
         /* Make button even smaller */
-        .stButton>button { 
+        .stButton>button {{ 
             padding: 0.1em 0.2em;
             font-size: 0.7em !important;
-        }
-    }
+        }}
+    }}
 </style>'''
 unsafe_allow_html=True)
 
