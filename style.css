@@ -1,48 +1,45 @@
 <style>
     /* Wakefit Brand Identity */
-    .stApp {
-        background-color: #FDFDFD;
-    }
+.stApp { background-color: #FDFDFD; }
+.stButton>button { background-color: #FF6600; color: white; border-radius: 4px; border: none; }
+.stButton>button:hover { border: 1px solid #FF6600; color: #FF6600; }
+.stMainView { will-change: transform; }
+h1 { font-size: 1.2rem !important; }
+h2 { font-size: 1.0rem !important; }
+h3 { font-size: 0.9rem !important; }
 
-    .stButton>button {
-        background-color: #FF6600;
-        color: white;
-        border-radius: 4px;
-        border: none;
+/* Cart layout optimization for mobile */
+@media (max-width: 768px) { 
+    /* Target the container for each cart item row */
+    div[data-testid="stVerticalBlock"] > div > div[data-testid="stHorizontalBlock"] { 
+        flex-direction: row; /* Ensure horizontal layout */
+        flex-wrap: nowrap;   /* Prevent wrapping to multiple lines */
+        align-items: center; /* Vertically align content */
+        gap: 0.25rem;        /* Reduce gap between columns */
     }
-
-    .stButton>button:hover {
-        border: 1px solid #FF6600;
-        color: #FF6600;
+    /* Adjust columns within the cart item to be compact */
+    div[data-testid="stVerticalBlock"] > div > div[data-testid="stHorizontalBlock"] > div[data-testid="column"] { 
+        flex-basis: auto; /* Allow columns to determine their own size based on content */
+        flex-grow: 1;     /* Allow columns to grow if space permits */
+        flex-shrink: 1;   /* Allow columns to shrink if space is tight */
+        min-width: 0;     /* Allow content to push columns to minimum size */
+        white-space: nowrap; /* Prevent text wrapping */
+        overflow: hidden;    /* Hide overflowing text */
+        text-overflow: ellipsis; /* Show ellipsis for truncated text */
     }
-
-    /* Performance & UX */
-    .stMainView {
-        will-change: transform;
+    /* Specific adjustments for number input */
+    div[data-testid="stNumberInput"] { 
+        width: 50px !important; /* Make number input very compact */
+        min-width: 50px !important;
     }
-
-    h1 { font-size: 1.2rem !important; }
-    h2 { font-size: 1.0rem !important; }
-    h3 { font-size: 0.9rem !important; }
-
-    /* --- Horizontal Cart Layout Optimization --- */
-    [data-testid="stHorizontalBlock"] {
-        align-items: center !important;
+    /* Smaller font for all text within cart items */
+    div[data-testid="stVerticalBlock"] > div > div[data-testid="stHorizontalBlock"] * { 
+        font-size: 0.75em !important; /* Smaller text for compactness */
     }
-
-    [data-testid="column"] {
-        min-width: fit-content !important;
-        flex: 1 1 auto !important;
+    /* Make button even smaller */
+    .stButton>button { 
+        padding: 0.1em 0.2em;
+        font-size: 0.7em !important;
     }
-
-    /* Center the delete button vertically with input fields */
-    .stButton > button {
-        margin-top: 0 !important;
-        white-space: nowrap;
-    }
-
-    /* Ensure quantity input is compact */
-    div[data-testid="stNumberInput"] {
-        width: 80px !important;
-    }
+}
 </style>
