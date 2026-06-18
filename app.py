@@ -23,6 +23,17 @@ def load_data():
     designs = pd.read_excel(path, sheet_name=0)
     materials = pd.read_excel(path, sheet_name=1)
     mapping = pd.read_excel(path, sheet_name=2)
+    
+    # Normalize column names and string data
+    designs.columns = [c.strip().lower() for c in designs.columns]
+    
+    # Convert published/active to consistent booleans regardless of Excel format
+    for col in ['published', 'active']:
+        if col in designs.columns:
+            designs[col] = designs[col].astype(str).str.strip().str.upper()
+            designs[col] = designs[col].map({'TRUE': True, '1': True, '1.0': True, 'YES': True, 'FALSE': False, '0': False, '0.0': False, 'NO': False})
+            designs[col] = designs[col].fillna(False)
+
     return designs, materials, mapping
 
 df_design, df_material, df_mapping = load_data()
@@ -32,10 +43,10 @@ if 'cart' not in st.session_state: st.session_state.cart = []
 if 'page' not in st.session_state: st.session_state.page = "design_select"
 if 'selected_design' not in st.session_state: st.session_state.selected_design = None
 
-# Header with Cart Icon
+# Header
 col_logo, col_empty, col_cart = st.columns([1, 4, 1])
 with col_logo:
-    st.markdown("**WAKEFIT**") # Placeholder for logo
+    st.markdown("**WAKEFIT**")
 with col_cart:
     if st.button(f"🛒 ({len(st.session_state.cart)})"):
         st.session_state.page = "cart"
@@ -44,8 +55,13 @@ with col_cart:
 # --- PAGE 1: Design Select ---
 if st.session_state.page == "design_select":
     st.title("Select Design")
+    # Filtering with normalized boolean columns
     active_designs = df_design[(df_design['published'] == True) & (df_design['active'] == True)]
-    design_list = active_designs['design_name'].tolist()
+    
+    design_list = active_designs['design_name'].tolist() if 'design_name' in active_designs.columns else []
+    
+    if not design_list:
+        st.error("No active/published designs found. Please check Excel data values.")
     
     selected = st.selectbox("Choose a design", ["Select..."] + design_list)
     if selected != "Select...":
@@ -72,12 +88,7 @@ elif st.session_state.page == "material_listing":
             c1.write(f"Price: ₹{row['price']}")
             qty = c2.number_input("Qty", min_value=1, value=1, key=f"qty_{row['material_sap_code']}")
             if c3.button("Add to Cart", key=f"btn_{row['material_sap_code']}"):
-                st.session_state.cart.append({
-                    'id': row['material_sap_code'],
-                    'name': row['material_name'],
-                    'price': row['price'],
-                    'qty': qty
-                })
+                st.session_state.cart.append({'id': row['material_sap_code'], 'name': row['material_name'], 'price': row['price'], 'qty': qty})
                 st.toast(f"Added {row['material_name']}!")
                 st.rerun()
 
@@ -97,18 +108,13 @@ elif st.session_state.page == "cart":
             c2.write(f"₹{item['price']}")
             new_qty = c3.number_input("Qty", min_value=1, value=item['qty'], key=f"cart_qty_{i}")
             st.session_state.cart[i]['qty'] = new_qty
-            subtotal = item['price'] * new_qty
-            total += subtotal
+            total += (item['price'] * new_qty)
             if c4.button("🗑️", key=f"del_{i}"):
                 st.session_state.cart.pop(i)
                 st.rerun()
         
         st.divider()
         st.subheader(f"Total: ₹{total}")
-        
-        if st.button("Take Screenshot / Save PDF"):
-             st.write("Please use your browser's Print/Save as PDF or mobile screenshot feature for the complete view.")
-
         if st.button("Clear Cart"):
             st.session_state.cart = []
             st.rerun()
