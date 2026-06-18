@@ -1,20 +1,17 @@
 import streamlit as st
 import pandas as pd
-from PIL import Image
-import base64
+import os
 
 # Page Config
-st.set_page_config(page_title="Wakefit PWA", layout="wide")
+st.set_page_config(page_title="Wakefit PWA", layout="centered")
 
 # Inject Custom CSS
 def local_css(file_name):
-    with open(file_name) as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    if os.path.exists(file_name):
+        with open(file_name) as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-try:
-    local_css("style.css")
-except:
-    pass
+local_css("style.css")
 
 # Load Data
 @st.cache_data
@@ -24,97 +21,87 @@ def load_data():
     materials = pd.read_excel(path, sheet_name=1)
     mapping = pd.read_excel(path, sheet_name=2)
     
-    # Normalize column names and string data
-    designs.columns = [c.strip().lower() for c in designs.columns]
+    # Normalize columns
+    designs.columns = [str(c).strip().lower() for c in designs.columns]
+    materials.columns = [str(c).strip().lower() for c in materials.columns]
+    mapping.columns = [str(c).strip().lower() for c in mapping.columns]
     
-    # Convert published/active to consistent booleans regardless of Excel format
+    # Normalize booleans
     for col in ['published', 'active']:
         if col in designs.columns:
-            designs[col] = designs[col].astype(str).str.strip().str.upper()
-            designs[col] = designs[col].map({'TRUE': True, '1': True, '1.0': True, 'YES': True, 'FALSE': False, '0': False, '0.0': False, 'NO': False})
-            designs[col] = designs[col].fillna(False)
+            designs[col] = designs[col].astype(str).str.strip().str.upper().map({'TRUE': True, '1': True, '1.0': True, 'YES': True, 'FALSE': False, '0': False, '0.0': False, 'NO': False}).fillna(False)
+
+    # Normalize ID columns to stripped strings to fix mapping issues
+    if 'design_code' in designs.columns: designs['design_code'] = designs['design_code'].astype(str).str.strip()
+    if 'design_code' in mapping.columns: mapping['design_code'] = mapping['design_code'].astype(str).str.strip()
+    if 'material_code' in mapping.columns: mapping['material_code'] = mapping['material_code'].astype(str).str.strip()
+    if 'material_sap_code' in materials.columns: materials['material_sap_code'] = materials['material_sap_code'].astype(str).str.strip()
 
     return designs, materials, mapping
 
 df_design, df_material, df_mapping = load_data()
 
-# State Management
+# Session State
 if 'cart' not in st.session_state: st.session_state.cart = []
 if 'page' not in st.session_state: st.session_state.page = "design_select"
 if 'selected_design' not in st.session_state: st.session_state.selected_design = None
 
-# Header
-col_logo, col_empty, col_cart = st.columns([1, 4, 1])
-with col_logo:
-    st.markdown("**WAKEFIT**")
-with col_cart:
-    if st.button(f"🛒 ({len(st.session_state.cart)})"):
-        st.session_state.page = "cart"
-        st.rerun()
+# UI Header
+st.markdown(f'<div class="cart-icon">🛒 {len(st.session_state.cart)}</div>', unsafe_allow_html=True)
 
 # --- PAGE 1: Design Select ---
 if st.session_state.page == "design_select":
-    st.title("Select Design")
-    # Filtering with normalized boolean columns
+    st.title("Design Select")
     active_designs = df_design[(df_design['published'] == True) & (df_design['active'] == True)]
+    design_names = active_designs['design_name'].unique().tolist()
     
-    design_list = active_designs['design_name'].tolist() if 'design_name' in active_designs.columns else []
-    
-    if not design_list:
-        st.error("No active/published designs found. Please check Excel data values.")
-    
-    selected = st.selectbox("Choose a design", ["Select..."] + design_list)
-    if selected != "Select...":
-        st.session_state.selected_design = active_designs[active_designs['design_name'] == selected]['design_code'].values[0]
+    selected_name = st.selectbox("Select Design", ["-- Select --"] + design_names)
+    if selected_name != "-- Select --":
+        code = active_designs[active_designs['design_name'] == selected_name]['design_code'].values[0]
+        st.session_state.selected_design = str(code)
         if st.button("Next"):
             st.session_state.page = "material_listing"
             st.rerun()
 
 # --- PAGE 2: Material Listing ---
 elif st.session_state.page == "material_listing":
-    st.title("Material Selection")
-    if st.button("← Back to Designs"):
+    st.title("Materials")
+    if st.button("Back"):
         st.session_state.page = "design_select"
         st.rerun()
 
-    d_code = st.session_state.selected_design
-    mapped_materials = df_mapping[df_mapping['design_code'] == d_code]['material_code'].tolist()
-    display_df = df_material[df_material['material_sap_code'].isin(mapped_materials)]
+    target_design = st.session_state.selected_design
+    # Filter mapping then materials
+    mapped_codes = df_mapping[df_mapping['design_code'] == target_design]['material_code'].unique().tolist()
+    listing = df_material[df_material['material_sap_code'].isin(mapped_codes)]
 
-    for _, row in display_df.iterrows():
-        with st.container():
-            c1, c2, c3 = st.columns([2, 1, 1])
-            c1.write(f"**{row['material_name']}**")
-            c1.write(f"Price: ₹{row['price']}")
-            qty = c2.number_input("Qty", min_value=1, value=1, key=f"qty_{row['material_sap_code']}")
-            if c3.button("Add to Cart", key=f"btn_{row['material_sap_code']}"):
-                st.session_state.cart.append({'id': row['material_sap_code'], 'name': row['material_name'], 'price': row['price'], 'qty': qty})
-                st.toast(f"Added {row['material_name']}!")
+    if listing.empty:
+        st.info("No materials mapped to this design.")
+    
+    for _, row in listing.iterrows():
+        with st.expander(f"{row['material_name']} - ₹{row['price']}"):
+            qty = st.number_input("Quantity", min_value=1, value=1, key=f"q_{row['material_sap_code']}")
+            if st.button("Add to Cart", key=f"a_{row['material_sap_code']}"):
+                st.session_state.cart.append({'name': row['material_name'], 'price': row['price'], 'qty': qty, 'id': row['material_sap_code']})
                 st.rerun()
 
 # --- PAGE 3: Cart ---
 elif st.session_state.page == "cart":
-    st.title("Your Cart")
+    st.title("Cart")
     if not st.session_state.cart:
-        st.warning("Cart is empty")
-        if st.button("Go to Design Select"):
+        st.write("Cart is empty")
+        if st.button("Back to Selection"): 
             st.session_state.page = "design_select"
             st.rerun()
     else:
         total = 0
         for i, item in enumerate(st.session_state.cart):
-            c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
-            c1.write(item['name'])
-            c2.write(f"₹{item['price']}")
-            new_qty = c3.number_input("Qty", min_value=1, value=item['qty'], key=f"cart_qty_{i}")
-            st.session_state.cart[i]['qty'] = new_qty
-            total += (item['price'] * new_qty)
-            if c4.button("🗑️", key=f"del_{i}"):
+            st.write(f"**{item['name']}** - ₹{item['price']} x {item['qty']}")
+            total += item['price'] * item['qty']
+            if st.button("Remove", key=f"r_{i}"): 
                 st.session_state.cart.pop(i)
                 st.rerun()
-        
-        st.divider()
         st.subheader(f"Total: ₹{total}")
-        if st.button("Clear Cart"):
+        if st.button("Clear Cart"): 
             st.session_state.cart = []
             st.rerun()
