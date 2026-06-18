@@ -1,92 +1,114 @@
 import streamlit as st
 import pandas as pd
-import os
+from PIL import Image
+import base64
 
-# --- Page Configuration ---
-st.set_page_config(page_title='Wakefit Material Tool', layout='wide', page_icon='🗳️')
+# Page Config
+st.set_page_config(page_title="Wakefit PWA", layout="wide")
 
-# --- Load External CSS ---
-def load_css(file_name):
-    if os.path.exists(file_name):
-        with open(file_name) as f:
-            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+# Inject Custom CSS
+def local_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-load_css('style.css')
+try:
+    local_css("style.css")
+except:
+    pass
 
-# --- Branding Constants ---
-W_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/e/e3/Wakefit_Logo.png'
-
-@st.cache_data(show_spinner=False)
+# Load Data
+@st.cache_data
 def load_data():
-    try:
-        # Updated to the new verified data source
-        xl = pd.ExcelFile('design_material_mapping_new.xlsx')
-        return pd.read_excel(xl, sheet_name='Designs'), pd.read_excel(xl, sheet_name='Material'), pd.read_excel(xl, sheet_name='Mapping')
-    except Exception as e:
-        st.error(f'Data Dependency Error: {e}')
-        return None, None, None
+    path = "design_material_mapping_new.xlsx"
+    designs = pd.read_excel(path, sheet_name=0)
+    materials = pd.read_excel(path, sheet_name=1)
+    mapping = pd.read_excel(path, sheet_name=2)
+    return designs, materials, mapping
 
-df_designs, df_mats, df_map = load_data()
+df_design, df_material, df_mapping = load_data()
 
-if 'cart' not in st.session_state: st.session_state.cart = {}
-if 'screen' not in st.session_state: st.session_state.screen = 'Design Selection'
+# State Management
+if 'cart' not in st.session_state: st.session_state.cart = []
+if 'page' not in st.session_state: st.session_state.page = "design_select"
+if 'selected_design' not in st.session_state: st.session_state.selected_design = None
 
-def nav(s):
-    st.session_state.screen = s
-    st.rerun()
+# Header with Cart Icon
+col_logo, col_empty, col_cart = st.columns([1, 4, 1])
+with col_logo:
+    st.markdown("**WAKEFIT**") # Placeholder for logo
+with col_cart:
+    if st.button(f"🛒 ({len(st.session_state.cart)})"):
+        st.session_state.page = "cart"
+        st.rerun()
 
-st.sidebar.image(W_LOGO, use_container_width=True)
-cnt = sum(i['quantity'] for i in st.session_state.cart.values())
-if st.sidebar.button(f'🛒 View Cart ({cnt})', use_container_width=True): nav('Cart Management')
-if st.sidebar.button('🔍 New Search', use_container_width=True): nav('Design Selection')
+# --- PAGE 1: Design Select ---
+if st.session_state.page == "design_select":
+    st.title("Select Design")
+    active_designs = df_design[(df_design['published'] == True) & (df_design['active'] == True)]
+    design_list = active_designs['design_name'].tolist()
+    
+    selected = st.selectbox("Choose a design", ["Select..."] + design_list)
+    if selected != "Select...":
+        st.session_state.selected_design = active_designs[active_designs['design_name'] == selected]['design_code'].values[0]
+        if st.button("Next"):
+            st.session_state.page = "material_listing"
+            st.rerun()
 
-if st.session_state.screen == 'Design Selection':
-    st.title('🏠 Select Design')
-    if df_designs is not None:
-        opts = df_designs.apply(lambda x: f"{x['design_name']} ({x['design_code']})", axis=1).tolist()
-        sel = st.selectbox('Search Design:', opts)
-        if st.button('Map Materials', type='primary'):
-            st.session_state.sel_design = sel.split('(')[-1].strip(')')
-            nav('Material Selection')
+# --- PAGE 2: Material Listing ---
+elif st.session_state.page == "material_listing":
+    st.title("Material Selection")
+    if st.button("← Back to Designs"):
+        st.session_state.page = "design_select"
+        st.rerun()
 
-elif st.session_state.screen == 'Material Selection':
-    d = st.session_state.sel_design
-    st.title(f'📦 Materials: {d}')
+    d_code = st.session_state.selected_design
+    mapped_materials = df_mapping[df_mapping['design_code'] == d_code]['material_code'].tolist()
+    display_df = df_material[df_material['material_sap_code'].isin(mapped_materials)]
 
-    # Relational mapping logic using verified column names
-    filtered_map = df_map[df_map['design_code'] == d]
-    m = pd.merge(filtered_map, df_mats, left_on='material_code', right_on='material_crm_code')
+    for _, row in display_df.iterrows():
+        with st.container():
+            c1, c2, c3 = st.columns([2, 1, 1])
+            c1.write(f"**{row['material_name']}**")
+            c1.write(f"Price: ₹{row['price']}")
+            qty = c2.number_input("Qty", min_value=1, value=1, key=f"qty_{row['material_sap_code']}")
+            if c3.button("Add to Cart", key=f"btn_{row['material_sap_code']}"):
+                st.session_state.cart.append({
+                    'id': row['material_sap_code'],
+                    'name': row['material_name'],
+                    'price': row['price'],
+                    'qty': qty
+                })
+                st.toast(f"Added {row['material_name']}!")
+                st.rerun()
 
-    if m.empty:
-        st.warning("No materials found for this design.")
-
-    for i, r in m.iterrows():
-        with st.container(border=True):
-            c1, c2, c3 = st.columns([3, 1, 1])
-            # Displaying material_type which was causing the regression
-            mat_type = f" ({r['material_type']})" if 'material_type' in r else ""
-            c1.markdown(f"**{r['material_name']}**{mat_type}")
-            c1.write(f"₹{r['price']:,}")
-            q = c2.number_input('Qty', 1, 100, 1, key=f'q{i}', label_visibility='collapsed')
-            if c3.button('Add', key=f'b{i}', type='primary', use_container_width=True):
-                cd = r['material_crm_code']
-                if cd in st.session_state.cart: st.session_state.cart[cd]['quantity'] += q
-                else: st.session_state.cart[cd] = {'name': r['material_name'], 'price': r['price'], 'quantity': q}
-                st.toast('✅ Added!')
-
-elif st.session_state.screen == 'Cart Management':
-    st.title('🛒 Cart Management')
-    if not st.session_state.cart: st.info('Your cart is empty.')
+# --- PAGE 3: Cart ---
+elif st.session_state.page == "cart":
+    st.title("Your Cart")
+    if not st.session_state.cart:
+        st.warning("Cart is empty")
+        if st.button("Go to Design Select"):
+            st.session_state.page = "design_select"
+            st.rerun()
     else:
-        tot = 0
-        for c, itm in list(st.session_state.cart.items()):
-            sub = itm['price'] * itm['quantity']; tot += sub
-            with st.container(border=True):
-                cols = st.columns([3, 1, 1, 0.5])
-                cols[0].write(f"**{itm['name']}**")
-                itm['quantity'] = cols[1].number_input('Qty', 1, 1000, itm['quantity'], key=f'e{c}', label_visibility='collapsed')
-                cols[2].write(f"₹{sub:,.2f}")
-                if cols[3].button('🗑️', key=f'd{c}'):
-                    del st.session_state.cart[c]
-                    st.rerun()
-        st.divider(); st.subheader(f'Total Estimate: ₹{tot:,.2f}')
+        total = 0
+        for i, item in enumerate(st.session_state.cart):
+            c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
+            c1.write(item['name'])
+            c2.write(f"₹{item['price']}")
+            new_qty = c3.number_input("Qty", min_value=1, value=item['qty'], key=f"cart_qty_{i}")
+            st.session_state.cart[i]['qty'] = new_qty
+            subtotal = item['price'] * new_qty
+            total += subtotal
+            if c4.button("🗑️", key=f"del_{i}"):
+                st.session_state.cart.pop(i)
+                st.rerun()
+        
+        st.divider()
+        st.subheader(f"Total: ₹{total}")
+        
+        if st.button("Take Screenshot / Save PDF"):
+             st.write("Please use your browser's Print/Save as PDF or mobile screenshot feature for the complete view.")
+
+        if st.button("Clear Cart"):
+            st.session_state.cart = []
+            st.rerun()
