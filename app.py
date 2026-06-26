@@ -61,14 +61,13 @@ st.markdown(f'<div class="cart-icon">🛒 {len(st.session_state.cart)}</div>', u
 
 if st.session_state.page == "design_select":
     st.title("Select Design")
-    
-    # Filter only Published and Active designs
-    # We use .get() and handle case-insensitive string conversion for boolean columns
-    mask_pub = df_design['published'].astype(str).str.upper() == 'TRUE' if 'published' in df_design.columns else True
-    mask_act = df_design['active'].astype(str).str.upper() == 'TRUE' if 'active' in df_design.columns else True
-    
+
+    # Filter only Published and Active designs where value is 'Yes'
+    mask_pub = df_design['published'].astype(str).str.strip().str.upper() == 'YES' if 'published' in df_design.columns else True
+    mask_act = df_design['active'].astype(str).str.strip().str.upper() == 'YES' if 'active' in df_design.columns else True
+
     active_designs = df_design[mask_pub & mask_act]
-    
+
     design_names = active_designs["design_name"].unique().tolist() if "design_name" in active_designs.columns else []
 
     selected_name = st.selectbox("Choose a design", ["-- Select --"] + design_names)
@@ -90,10 +89,10 @@ elif st.session_state.page == "material_listing":
         st.rerun()
 
     target_design = st.session_state.selected_design
-    
+
     m_code_col = "material_code" if "material_code" in df_mapping.columns else "material_crm_code" 
     mapped_codes = df_mapping[df_mapping["design_code"] == target_design][m_code_col].unique().tolist()
-    
+
     m_crm_col = "material_crm_code" if "material_crm_code" in df_material.columns else df_material.columns[0]
     listing = df_material[df_material[m_crm_col].isin(mapped_codes)]
 
