@@ -16,9 +16,9 @@ local_css("style.css")
 # Load Data
 @st.cache_data
 def load_data():
-    path = "design_material_mapping_new.xlsx"
+    path = "design_material_mapping_new_new.xlsx"
     if not os.path.exists(path):
-        path = "/content/design_material_mapping_new.xlsx"
+        path = "/content/design_material_mapping_new_new.xlsx"
 
     if not os.path.exists(path):
         st.error(f"File not found: {path}")
