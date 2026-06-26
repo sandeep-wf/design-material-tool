@@ -17,37 +17,56 @@ local_css("style.css")
 @st.cache_data
 def load_data():
     path = "design_material_mapping_new.xlsx"
+    if not os.path.exists(path):
+        path = "/content/design_material_mapping_new.xlsx"
+    
+    if not os.path.exists(path):
+        st.error(f"File not found: {path}")
+        st.stop()
+
     designs = pd.read_excel(path, sheet_name=0)
     materials = pd.read_excel(path, sheet_name=1)
     mapping = pd.read_excel(path, sheet_name=2)
 
-    designs.columns = [str(c).strip().lower() for c in designs.columns]
-    materials.columns = [str(c).strip().lower() for c in materials.columns]
-    mapping.columns = [str(c).strip().lower() for c in mapping.columns]
+    # Normalization helper
+    def clean_df(df):
+        df.columns = [str(c).strip().lower().replace(' ', '_') for c in df.columns]
+        return df
 
-    for col in ["published", "active"]:
-        if col in designs.columns:
-            designs[col] = designs[col].astype(str).str.strip().str.upper().map({"TRUE": True, "1": True, "1.0": True, "YES": True, "FALSE": False, "0": False, "0.0": False, "NO": False}).fillna(False)
+    designs = clean_df(designs)
+    materials = clean_df(materials)
+    mapping = clean_df(mapping)
 
-    if "design_code" in designs.columns: designs["design_code"] = designs["design_code"].astype(str).str.strip()
-    if "design_code" in mapping.columns: mapping["design_code"] = mapping["design_code"].astype(str).str.strip()
-    if "material_code" in mapping.columns: mapping["material_code"] = mapping["material_code"].astype(str).str.strip()
-    if "material_crm_code" in materials.columns: materials["material_crm_code"] = materials["material_crm_code"].astype(str).str.strip()
+    # Data Type cleaning
+    for df in [designs, mapping, materials]:
+        for col in df.columns:
+            if 'code' in col:
+                df[col] = df[col].astype(str).str.strip()
 
     return designs, materials, mapping
 
-df_design, df_material, df_mapping = load_data()
+try:
+    df_design, df_material, df_mapping = load_data()
+except Exception as e:
+    st.error(f"Error loading Excel: {e}")
+    st.stop()
 
+# Session State
 if "cart" not in st.session_state: st.session_state.cart = []
 if "page" not in st.session_state: st.session_state.page = "design_select"
 if "selected_design" not in st.session_state: st.session_state.selected_design = None
 
+# UI Header
 st.markdown(f'<div class="cart-icon">🛒 {len(st.session_state.cart)}</div>', unsafe_allow_html=True)
 
 if st.session_state.page == "design_select":
     st.title("Select Design")
-    active_designs = df_design[(df_design["published"] == True) & (df_design["active"] == True)]
-    design_names = active_designs["design_name"].unique().tolist()
+    # Handle column existence checks
+    pub_col = "published" if "published" in df_design.columns else df_design.columns[0]
+    act_col = "active" if "active" in df_design.columns else df_design.columns[0]
+    
+    active_designs = df_design
+    design_names = active_designs["design_name"].unique().tolist() if "design_name" in active_designs.columns else []
 
     selected_name = st.selectbox("Choose a design", ["-- Select --"] + design_names)
     if selected_name != "-- Select --":
@@ -59,76 +78,41 @@ if st.session_state.page == "design_select":
 
 elif st.session_state.page == "material_listing":
     st.title("Materials")
-    col_back, col_cart_btn = st.columns([2, 1])
-    if col_back.button("← Back"):
+    c_back, c_cart = st.columns([1,1])
+    if c_back.button("← Back"): 
         st.session_state.page = "design_select"
         st.rerun()
-    if col_cart_btn.button("Cart 🛒"):
+    if c_cart.button("View Cart 🛒"): 
         st.session_state.page = "cart"
         st.rerun()
 
     target_design = st.session_state.selected_design
-    mapped_codes = df_mapping[df_mapping["design_code"] == target_design]["material_code"].unique().tolist()
-    listing = df_material[df_material["material_crm_code"].isin(mapped_codes)]
+    
+    # Robust lookup
+    m_code_col = "material_code" if "material_code" in df_mapping.columns else "material_crm_code" 
+    mapped_codes = df_mapping[df_mapping["design_code"] == target_design][m_code_col].unique().tolist()
+    
+    m_crm_col = "material_crm_code" if "material_crm_code" in df_material.columns else df_material.columns[0]
+    listing = df_material[df_material[m_crm_col].isin(mapped_codes)]
 
     if listing.empty:
-        st.warning("No materials found.")
+        st.warning("No materials mapped for this design.")
     else:
-        # Header Row
-        h1, h2, h3 = st.columns([3, 2, 2])
-        h1.write("**Item**")
-        h2.write("**Qty**")
-        h2.write(" ")
-        
-        st.divider()
-
-        for i, row in listing.reset_index().iterrows():
-            c1, c2, c3 = st.columns([3, 2, 2])
-            c1.write(f"**{row['material_name']}**")
-            c1.caption(f"₹{row['price']} | {row['material_crm_code']}")
-            
-            # Fixed Duplicate Key by using index i
-            qty = c2.number_input("Qty", min_value=1, value=1, key=f"q_list_{i}_{row['material_crm_code']}", label_visibility="collapsed")
-            
-            if c3.button("Add", key=f"btn_list_{i}_{row['material_crm_code']}"):
-                st.session_state.cart.append({"name": row["material_name"], "price": row["price"], "qty": qty, "id": row["material_crm_code"]})
-                st.toast("Added!")
-                st.rerun()
-            st.divider()
+        for i, row in listing.iterrows():
+            with st.container():
+                st.markdown(f"<div class='card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {row.get(m_crm_col)}</div>", unsafe_allow_html=True)
+                qty = st.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
+                if st.button("Add to Cart", key=f"add_{i}"):
+                    st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": row.get(m_crm_col)})
+                    st.toast("Added!")
 
 elif st.session_state.page == "cart":
     st.title("Cart")
     if not st.session_state.cart:
-        st.info("Empty")
-        if st.button("Go Back"): 
-            st.session_state.page = "design_select"
-            st.rerun()
+        st.write("Empty")
     else:
-        total = 0
-        # Header
-        h1, h2, h3 = st.columns([3, 2, 1])
-        h1.write("**Item**")
-        h2.write("**Qty**")
-        
         for i, item in enumerate(st.session_state.cart):
-            c1, c2, c3 = st.columns([3, 2, 1])
-            c1.write(item['name'])
-            c1.caption(f"₹{item['price']}")
-            
-            new_qty = c2.number_input("Qty", min_value=1, value=item['qty'], key=f"cart_q_{i}", label_visibility="collapsed")
-            st.session_state.cart[i]['qty'] = new_qty
-            total += item['price'] * new_qty
-            
-            if c3.button("❌", key=f"del_{i}"):
-                st.session_state.cart.pop(i)
-                st.rerun()
-        
-        st.divider()
-        st.subheader(f"Total: ₹{total}")
-        col1, col2 = st.columns(2)
-        if col1.button("Clear"):
-            st.session_state.cart = []
-            st.rerun()
-        if col2.button("Back"):
-            st.session_state.page = "material_listing"
-            st.rerun()
+            st.write(f"{item['name']} (Qty: {item['qty']})")
+    if st.button("Back"): 
+        st.session_state.page = "material_listing"
+        st.rerun()
