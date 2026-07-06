@@ -15,7 +15,7 @@ local_css("style.css")
 
 @st.cache_data
 def load_data():
-    path = "/content/design_material_mapping_new.xlsx"
+    path = "design_material_mapping_06.xlsx"
     designs = pd.read_excel(path, sheet_name=0)
     materials = pd.read_excel(path, sheet_name=1)
     mapping = pd.read_excel(path, sheet_name=2)
