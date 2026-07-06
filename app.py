@@ -79,8 +79,8 @@ if st.session_state.page == "design_select":
 elif st.session_state.page == "material_listing":
     st.title("Materials")
     if st.session_state.selected_design_name:
-        st.subheader(f"Design: {st.session_state.selected_design_name}")
-    
+        st.subheader(st.session_state.selected_design_name)
+
     c_back, c_cart = st.columns([1,1])
     if c_back.button("← Back"):
         st.session_state.page = "design_select"
@@ -106,7 +106,7 @@ elif st.session_state.page == "material_listing":
                 if st.button("Add to Cart", key=f"add_{i}"):
                     st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": row.get(m_crm_col), "price": float(price)})
                     st.toast("Added!")
-        
+
         st.markdown("---")
         if st.button("View Cart 🛒", key="view_cart_bottom"):
             st.session_state.page = "cart"
@@ -137,11 +137,11 @@ elif st.session_state.page == "cart":
 
         st.divider()
         st.markdown(f"### Grand Total: ₹{grand_total}")
-        
+
         if st.button("🗑️ Clear Cart", type="primary"):
             st.session_state.cart = []
             st.rerun()
-        
+
         if st.button("Back"):
             st.session_state.page = "material_listing"
             st.rerun()
