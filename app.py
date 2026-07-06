@@ -116,8 +116,8 @@ elif st.session_state.page == "cart":
     st.title("Your Cart")
     if not st.session_state.cart:
         st.info("Your cart is empty.")
-        if st.button("Back to Materials"): 
-            st.session_state.page = "material_listing"
+        if st.button("Back to Design Selection"):
+            st.session_state.page = "design_select"
             st.rerun()
     else:
         grand_total = 0
