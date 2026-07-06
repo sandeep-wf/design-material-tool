@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
 import os
+from datetime import date
 
 # Page Config
 st.set_page_config(page_title="Wakefit PWA", layout="centered")
 
-# Inject Custom CSS
 def local_css(file_name):
     if os.path.exists(file_name):
         with open(file_name) as f:
@@ -13,63 +13,36 @@ def local_css(file_name):
 
 local_css("style.css")
 
-# Load Data
 @st.cache_data
 def load_data():
-    path = "design_material_mapping_06.xlsx"
-    if not os.path.exists(path):
-        path = "/content/design_material_mapping_06.xlsx"
-
-    if not os.path.exists(path):
-        st.error(f"File not found: {path}")
-        st.stop()
-
+    path = "/content/design_material_mapping_new.xlsx"
     designs = pd.read_excel(path, sheet_name=0)
     materials = pd.read_excel(path, sheet_name=1)
     mapping = pd.read_excel(path, sheet_name=2)
-
-    # Normalization helper
     def clean_df(df):
         df.columns = [str(c).strip().lower().replace(' ', '_') for c in df.columns]
         return df
-
-    designs = clean_df(designs)
-    materials = clean_df(materials)
-    mapping = clean_df(mapping)
-
-    # Data Type cleaning
-    for df in [designs, mapping, materials]:
-        for col in df.columns:
-            if 'code' in col:
-                df[col] = df[col].astype(str).str.strip()
-
-    return designs, materials, mapping
+    return clean_df(designs), clean_df(materials), clean_df(mapping)
 
 try:
     df_design, df_material, df_mapping = load_data()
 except Exception as e:
-    st.error(f"Error loading Excel: {e}")
+    st.error("Please ensure data is loaded.")
     st.stop()
 
-# Session State
 if "cart" not in st.session_state: st.session_state.cart = []
 if "page" not in st.session_state: st.session_state.page = "design_select"
-if "selected_design" not in st.session_state: st.session_state.selected_design = None
-if "selected_design_name" not in st.session_state: st.session_state.selected_design_name = None
+if "selected_design_name" not in st.session_state: st.session_state.selected_design_name = "None"
 
-# UI Header
 total_items = sum(item['qty'] for item in st.session_state.cart)
-st.markdown(f'<div class="cart-icon">🛒 {total_items}</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="cart-icon no-print">🛒 {total_items}</div>', unsafe_allow_html=True)
 
 if st.session_state.page == "design_select":
     st.title("Select Design")
-    mask_pub = df_design['published'].astype(str).str.strip().str.upper() == 'YES' if 'published' in df_design.columns else True
-    mask_act = df_design['active'].astype(str).str.strip().str.upper() == 'YES' if 'active' in df_design.columns else True
-    active_designs = df_design[mask_pub & mask_act]
-    design_names = active_designs["design_name"].unique().tolist() if "design_name" in active_designs.columns else []
+    design_names = df_design["design_name"].unique().tolist()
     selected_name = st.selectbox("Choose a design", ["-- Select --"] + design_names)
     if selected_name != "-- Select --":
-        design_row = active_designs[active_designs["design_name"] == selected_name]
+        design_row = df_design[df_design["design_name" ] == selected_name]
         st.session_state.selected_design = str(design_row["design_code"].values[0])
         st.session_state.selected_design_name = selected_name
         if st.button("Next"):
@@ -78,79 +51,65 @@ if st.session_state.page == "design_select":
 
 elif st.session_state.page == "material_listing":
     st.title("Materials")
-    if st.session_state.selected_design_name:
-        st.subheader(st.session_state.selected_design_name)
+    c1, c2 = st.columns(2)
+    if c1.button("← Back"): st.session_state.page = "design_select"; st.rerun()
+    if c2.button("View Cart 🛒"): st.session_state.page = "cart"; st.rerun()
+    
+    target = st.session_state.selected_design
+    m_codes = df_mapping[df_mapping["design_code"].astype(str) == target]["material_code"].unique().tolist()
+    listing = df_material[df_material["material_crm_code"].astype(str).isin([str(x) for x in m_codes])]
 
-    c_back, c_cart = st.columns([1,1])
-    if c_back.button("← Back"):
-        st.session_state.page = "design_select"
-        st.rerun()
-    if c_cart.button("View Cart 🛒", key="view_cart_top"):
-        st.session_state.page = "cart"
-        st.rerun()
-
-    target_design = st.session_state.selected_design
-    m_code_col = "material_code" if "material_code" in df_mapping.columns else "material_crm_code"
-    mapped_codes = df_mapping[df_mapping["design_code"] == target_design][m_code_col].unique().tolist()
-    m_crm_col = "material_crm_code" if "material_crm_code" in df_material.columns else df_material.columns[0]
-    listing = df_material[df_material[m_crm_col].isin(mapped_codes)]
-
-    if listing.empty:
-        st.warning("No materials mapped for this design.")
-    else:
-        for i, row in listing.iterrows():
-            price = row.get('price', 0)
-            m_id = row.get(m_crm_col)
-            with st.container():
-                st.markdown(f"<div class='card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {m_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
-                qty = st.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
-                if st.button("Add to Cart", key=f"add_{i}"):
-                    # Check if item already in cart to update qty instead of duplicate
-                    found = False
-                    for item in st.session_state.cart:
-                        if item["id"] == m_id:
-                            item["qty"] += qty
-                            found = True
-                            break
-                    if not found:
-                        st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": m_id, "price": float(price)})
-                    st.toast("Added!")
-
-        st.markdown("---")
-        if st.button("View Cart 🛒", key="view_cart_bottom"):
-            st.session_state.page = "cart"
-            st.rerun()
+    for i, row in listing.iterrows():
+        with st.container():
+            st.markdown(f"<div class='card'><b>{row['material_name']}</b><br>Price: ₹{row['price']}</div>", unsafe_allow_html=True)
+            qty = st.number_input("Qty", 1, 100, 1, key=f"q_{i}")
+            if st.button("Add to Cart", key=f"a_{i}"):
+                found = False
+                for item in st.session_state.cart:
+                    if item["id"] == row['material_crm_code']:
+                        item["qty"] += qty
+                        found = True
+                        break
+                if not found:
+                    st.session_state.cart.append({"name": row['material_name'], "qty": qty, "id": row['material_crm_code'], "price": float(row['price'])})
+                st.toast("Added!")
 
 elif st.session_state.page == "cart":
-    st.title("Your Cart")
+    c_title, c_print = st.columns([3, 1])
+    c_title.markdown("<h1 class='no-print'>Your Cart</h1>", unsafe_allow_html=True)
+    
     if not st.session_state.cart:
-        st.info("Your cart is empty.")
-        if st.button("Back to Design Selection"):
-            st.session_state.page = "design_select"
-            st.rerun()
+        st.info("Empty cart.")
+        if st.button("Back"): st.session_state.page = "design_select"; st.rerun()
     else:
+        # Simple Trigger: Customer name enables print
+        cust_name = st.text_input("Customer Name", placeholder="Please enter customer name")
+        if cust_name:
+            if c_print.button("🖨️ Print"):
+                st.markdown('<script>window.print();</script>', unsafe_allow_html=True)
+
+        # Simple quotation header for print output
+        st.markdown(f"""
+        <div class='print-only'>
+            <h2 style='text-align:center;'>Quotation</h2>
+            <p><b>Customer:</b> {cust_name}<br><b>Design:</b> {st.session_state.selected_design_name}<br><b>Date:</b> {date.today()}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
         grand_total = 0
+        table_html = "<table style='width:100%; border-collapse: collapse; margin-top:10px;' border='1'><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr>"
+
         for i, item in enumerate(st.session_state.cart):
             item_total = item['price'] * item['qty']
             grand_total += item_total
-            with st.container():
-                col1, col2 = st.columns([2, 1])
-                col1.markdown(f"**{item['name']}**<br>₹{item['price']} x {item['qty']} = ₹{item_total}", unsafe_allow_html=True)
-                new_qty = col2.number_input("Edit Qty", min_value=0, value=item['qty'], key=f"edit_{i}")
-                if new_qty != item['qty']:
-                    if new_qty == 0:
-                        st.session_state.cart.pop(i)
-                    else:
-                        st.session_state.cart[i]['qty'] = new_qty
-                    st.rerun()
+            table_html += f"<tr><td style='padding:5px;'>{item['name']}</td><td style='text-align:center;'>{item['qty']}</td><td>₹{item['price']}</td><td>₹{item_total}</td></tr>"
+            # Interactive screen layout
+            st.markdown(f"<div class='no-print'><b>{item['name']}</b> (₹{item['price']} x {item['qty']} = ₹{item_total})</div>", unsafe_allow_html=True)
 
-        st.divider()
-        st.markdown(f"### Grand Total: ₹{grand_total}")
+        table_html += f"<tr><td colspan='3' style='text-align:right;'><b>Grand Total</b></td><td><b>₹{grand_total}</b></td></tr></table>"
+        
+        st.markdown(f"<div class='print-only'>{table_html}</div>", unsafe_allow_html=True)
+        st.markdown(f"<h3 class='no-print'>Grand Total: ₹{grand_total}</h3>", unsafe_allow_html=True)
 
-        if st.button("🗑️ Clear Cart", type="primary"):
-            st.session_state.cart = []
-            st.rerun()
-
-        if st.button("Back"):
-            st.session_state.page = "material_listing"
-            st.rerun()
+        if st.button("🗑️ Clear Cart", key="clr"): st.session_state.cart = []; st.rerun()
+        if st.button("← Back to Materials", key="bm"): st.session_state.page = "material_listing"; st.rerun()
