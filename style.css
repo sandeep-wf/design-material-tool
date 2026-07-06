@@ -1,58 +1,22 @@
-.stApp {
-    background-color: #F5F5F5;
-}
-.main {
-    color: #1A237E;
-    font-family: 'Inter', sans-serif;
-}
-.stButton>button {
-    background-color: #1A237E;
-    color: white;
-    border-radius: 8px;
-    width: 100%;
-    border: none;
-    padding: 0.5rem;
-    font-weight: 600;
-}
-.stButton>button:hover {
-    background-color: #FFD54F;
-    color: #1A237E;
-}
-.cart-icon {
-    position: fixed;
-    top: 40px;
-    right: 20px;
-    background: #FFD54F;
-    padding: 8px 15px;
-    border-radius: 20px;
-    z-index: 1000;
-    font-weight: bold;
-    box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
-}
-.card {
-    background: white;
-    padding: 15px;
-    border-radius: 12px;
-    box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
-    margin-bottom: 15px;
-}
 
-/* Print Styles: Only show quotation content */
-@media print {
-    .stButton, .cart-icon, header, footer, [data-testid="stSidebar"], .no-print, [data-testid="stHeader"], .stTextInput, .stNumberInput, h1 {
-        display: none !important;
-    }
-    .print-only {
-        display: block !important;
+    /* Wakefit Theme Colors: Navy Blue #1A237E, Yellow/Gold #FFD54F */
+    .stApp {
+        background-color: #FFFFFF;
     }
     .main {
-        background-color: white !important;
+        color: #1A237E;
     }
-    .stMarkdown {
-        color: black !important;
+    .stButton>button {
+        background-color: #1A237E;
+        color: white;
+        border-radius: 8px;
     }
-}
-.print-only {
-    display: none;
-}
-
+    .cart-icon {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #FFD54F;
+        padding: 10px;
+        border-radius: 50%;
+        z-index: 1000;
+    }
