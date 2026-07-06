@@ -100,11 +100,20 @@ elif st.session_state.page == "material_listing":
     else:
         for i, row in listing.iterrows():
             price = row.get('price', 0)
+            m_id = row.get(m_crm_col)
             with st.container():
-                st.markdown(f"<div class='card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {row.get(m_crm_col)}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {m_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
                 qty = st.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
                 if st.button("Add to Cart", key=f"add_{i}"):
-                    st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": row.get(m_crm_col), "price": float(price)})
+                    # Check if item already in cart to update qty instead of duplicate
+                    found = False
+                    for item in st.session_state.cart:
+                        if item["id"] == m_id:
+                            item["qty"] += qty
+                            found = True
+                            break
+                    if not found:
+                        st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
 
         st.markdown("---")
