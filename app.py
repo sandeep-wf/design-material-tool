@@ -55,6 +55,7 @@ except Exception as e:
 if "cart" not in st.session_state: st.session_state.cart = []
 if "page" not in st.session_state: st.session_state.page = "design_select"
 if "selected_design" not in st.session_state: st.session_state.selected_design = None
+if "selected_design_name" not in st.session_state: st.session_state.selected_design_name = None
 
 # UI Header
 total_items = sum(item['qty'] for item in st.session_state.cart)
@@ -70,17 +71,21 @@ if st.session_state.page == "design_select":
     if selected_name != "-- Select --":
         design_row = active_designs[active_designs["design_name"] == selected_name]
         st.session_state.selected_design = str(design_row["design_code"].values[0])
+        st.session_state.selected_design_name = selected_name
         if st.button("Next"):
             st.session_state.page = "material_listing"
             st.rerun()
 
 elif st.session_state.page == "material_listing":
     st.title("Materials")
+    if st.session_state.selected_design_name:
+        st.subheader(f"Design: {st.session_state.selected_design_name}")
+    
     c_back, c_cart = st.columns([1,1])
     if c_back.button("← Back"):
         st.session_state.page = "design_select"
         st.rerun()
-    if c_cart.button("View Cart 🛒"):
+    if c_cart.button("View Cart 🛒", key="view_cart_top"):
         st.session_state.page = "cart"
         st.rerun()
 
@@ -101,6 +106,11 @@ elif st.session_state.page == "material_listing":
                 if st.button("Add to Cart", key=f"add_{i}"):
                     st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": row.get(m_crm_col), "price": float(price)})
                     st.toast("Added!")
+        
+        st.markdown("---")
+        if st.button("View Cart 🛒", key="view_cart_bottom"):
+            st.session_state.page = "cart"
+            st.rerun()
 
 elif st.session_state.page == "cart":
     st.title("Your Cart")
