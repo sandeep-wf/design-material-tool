@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import os
@@ -123,6 +124,11 @@ elif st.session_state.page == "material_listing":
 
 elif st.session_state.page == "cart":
     st.title("Your Cart")
+    
+    # New Input Boxes
+    customer_name = st.text_input("Customer Name", key="customer_name_input")
+    special_remarks = st.text_area("Special Remarks", key="special_remarks_input")
+
     if not st.session_state.cart:
         st.info("Your cart is empty.")
         if st.button("Back to Design Selection"):
