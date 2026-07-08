@@ -106,7 +106,6 @@ elif st.session_state.page == "material_listing":
                 st.markdown(f"<div class='card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {m_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
                 qty = st.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
                 if st.button("Add to Cart", key=f"add_{i}"):
-                    # Check if item already in cart to update qty instead of duplicate
                     found = False
                     for item in st.session_state.cart:
                         if item["id"] == m_id:
@@ -124,8 +123,7 @@ elif st.session_state.page == "material_listing":
 
 elif st.session_state.page == "cart":
     st.title("Your Cart")
-    
-    # New Input Boxes
+
     customer_name = st.text_input("Customer Name", key="customer_name_input")
     special_remarks = st.text_area("Special Remarks", key="special_remarks_input")
 
@@ -152,6 +150,11 @@ elif st.session_state.page == "cart":
 
         st.divider()
         st.markdown(f"### Grand Total: ₹{grand_total}")
+
+        # Handmade design upload
+        uploaded_file = st.file_uploader("Upload Hand Made Design", type=['png', 'jpg', 'jpeg'], key="design_upload")
+        if uploaded_file is not None:
+            st.image(uploaded_file, caption="Hand Made Design", use_container_width=True)
 
         if st.button("🗑️ Clear Cart", type="primary"):
             st.session_state.cart = []
