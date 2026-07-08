@@ -116,6 +116,11 @@ elif st.session_state.page == "material_listing":
                     if not found:
                         st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
+        
+        st.divider()
+        if st.button("View Cart 🛒", key="view_cart_bottom"):
+            st.session_state.page = "cart"
+            st.rerun()
 
 elif st.session_state.page == "cart":
     st.title("Your Cart")
