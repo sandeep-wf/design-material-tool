@@ -2,6 +2,9 @@
 import streamlit as st
 import pandas as pd
 import os
+from datetime import date
+from fpdf import FPDF
+import base64
 
 # Page Config
 st.set_page_config(page_title="Wakefit PWA", layout="centered")
@@ -29,7 +32,6 @@ def load_data():
     materials = pd.read_excel(path, sheet_name=1)
     mapping = pd.read_excel(path, sheet_name=2)
 
-    # Normalization helper
     def clean_df(df):
         df.columns = [str(c).strip().lower().replace(' ', '_') for c in df.columns]
         return df
@@ -38,7 +40,6 @@ def load_data():
     materials = clean_df(materials)
     mapping = clean_df(mapping)
 
-    # Data Type cleaning
     for df in [designs, mapping, materials]:
         for col in df.columns:
             if 'code' in col:
@@ -116,11 +117,6 @@ elif st.session_state.page == "material_listing":
                         st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
 
-        st.markdown("---")
-        if st.button("View Cart 🛒", key="view_cart_bottom"):
-            st.session_state.page = "cart"
-            st.rerun()
-
 elif st.session_state.page == "cart":
     st.title("Your Cart")
 
@@ -151,14 +147,56 @@ elif st.session_state.page == "cart":
         st.divider()
         st.markdown(f"### Grand Total: ₹{grand_total}")
 
-        # Handmade design upload
         uploaded_file = st.file_uploader("Upload Hand Made Design", type=['png', 'jpg', 'jpeg'], key="design_upload")
         if uploaded_file is not None:
             st.image(uploaded_file, caption="Hand Made Design", use_container_width=True)
 
-        if st.button("🗑️ Clear Cart", type="primary"):
+        col_clr, col_prnt = st.columns(2)
+        if col_clr.button("🗑️ Clear Cart", type="primary", use_container_width=True):
             st.session_state.cart = []
             st.rerun()
+
+        if col_prnt.button("🖨️ Print PDF", use_container_width=True):
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(190, 10, "Wakefit Quotation", 0, 1, "C")
+            pdf.set_font("Arial", "", 12)
+            pdf.ln(5)
+            pdf.cell(190, 10, f"Customer Name: {customer_name}", 0, 1)
+            pdf.cell(190, 10, f"Date: {date.today().strftime('%d-%m-%Y')}", 0, 1)
+            pdf.multi_cell(190, 10, f"Remarks: {special_remarks}")
+            pdf.ln(5)
+
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(80, 10, "Product", 1)
+            pdf.cell(30, 10, "Qty", 1, 0, "C")
+            pdf.cell(40, 10, "Price", 1, 0, "C")
+            pdf.cell(40, 10, "Total", 1, 1, "C")
+
+            pdf.set_font("Arial", "", 12)
+            for item in st.session_state.cart:
+                pdf.cell(80, 10, str(item['name']), 1)
+                pdf.cell(30, 10, str(item['qty']), 1, 0, "C")
+                pdf.cell(40, 10, f"Rs.{item['price']}", 1, 0, "C")
+                pdf.cell(40, 10, f"Rs.{item['price'] * item['qty']}", 1, 1, "C")
+
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(150, 10, "Grand Total", 1, 0, "R")
+            pdf.cell(40, 10, f"Rs.{grand_total}", 1, 1, "C")
+
+            if uploaded_file is not None:
+                pdf.ln(10)
+                pdf.cell(190, 10, "Hand Made Design:", 0, 1)
+                temp_path = "temp_design.png"
+                with open(temp_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                pdf.image(temp_path, x=10, w=100)
+
+            pdf_bytes = pdf.output(dest='S').encode('latin-1')
+            b64 = base64.b64encode(pdf_bytes).decode('latin-1')
+            href = f'<a href="data:application/octet-stream;base64,{b64}" download="quotation.pdf" style="text-decoration:none;"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px; cursor:pointer;">Click here to Download PDF</button></a>'
+            st.markdown(href, unsafe_allow_html=True)
 
         if st.button("Back"):
             st.session_state.page = "material_listing"
