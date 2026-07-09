@@ -84,10 +84,10 @@ elif st.session_state.page == "material_listing":
         st.subheader(st.session_state.selected_design_name)
 
     c_back, c_cart = st.columns([1,1])
-    if c_back.button("← Back"):
+    if c_back.button("← Back"): 
         st.session_state.page = "design_select"
         st.rerun()
-    if c_cart.button("View Cart 🛒", key="view_cart_top"):
+    if c_cart.button("View Cart 🛒", key="view_cart_top"): 
         st.session_state.page = "cart"
         st.rerun()
 
@@ -116,7 +116,7 @@ elif st.session_state.page == "material_listing":
                     if not found:
                         st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
-        
+
         st.divider()
         if st.button("View Cart 🛒", key="view_cart_bottom"):
             st.session_state.page = "cart"
@@ -124,6 +124,8 @@ elif st.session_state.page == "material_listing":
 
 elif st.session_state.page == "cart":
     st.title("Your Cart")
+    if st.session_state.selected_design_name:
+        st.subheader(st.session_state.selected_design_name)
 
     customer_name = st.text_input("Customer Name", key="customer_name_input")
     special_remarks = st.text_area("Special Remarks", key="special_remarks_input")
@@ -169,6 +171,7 @@ elif st.session_state.page == "cart":
             pdf.set_font("Arial", "", 12)
             pdf.ln(5)
             pdf.cell(190, 10, f"Customer Name: {customer_name}", 0, 1)
+            pdf.cell(190, 10, f"Design: {st.session_state.selected_design_name}", 0, 1)
             pdf.cell(190, 10, f"Date: {date.today().strftime('%d-%m-%Y')}", 0, 1)
             pdf.multi_cell(190, 10, f"Remarks: {special_remarks}")
             pdf.ln(5)
