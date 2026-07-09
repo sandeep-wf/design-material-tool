@@ -93,19 +93,27 @@ elif st.session_state.page == "material_listing":
     m_crm_col = "material_crm_code" if "material_crm_code" in df_material.columns else df_material.columns[0]
     listing = df_material[df_material[m_crm_col].isin(mapped_codes)]
 
-    for i, row in listing.iterrows():
-        price = row.get('price', 0)
-        m_id = row.get(m_crm_col)
-        with st.container():
-            st.markdown(f"<div class='card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {m_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
-            qty = st.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
-            if st.button("Add to Cart", key=f"add_{i}"):
-                found = False
-                for item in st.session_state.cart:
-                    if item["id"] == m_id: item["qty"] += qty; found = True; break
-                if not found:
-                    st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": m_id, "price": float(price)})
-                st.toast("Added!")
+    if listing.empty:
+        st.warning("No materials mapped for this design.")
+    else:
+        for i, row in listing.iterrows():
+            price = row.get('price', 0)
+            m_id = row.get(m_crm_col)
+            with st.container():
+                st.markdown(f"<div class='card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {m_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
+                qty = st.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
+                if st.button("Add to Cart", key=f"add_{i}"):
+                    found = False
+                    for item in st.session_state.cart:
+                        if item["id"] == m_id: item["qty"] += qty; found = True; break
+                    if not found:
+                        st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": m_id, "price": float(price)})
+                    st.toast("Added!")
+        
+        st.divider()
+        if st.button("View Cart 🛒", key="view_cart_bottom"):
+            st.session_state.page = "cart"
+            st.rerun()
 
 elif st.session_state.page == "cart":
     st.title("Your Cart")
@@ -136,6 +144,9 @@ elif st.session_state.page == "cart":
         st.markdown(f"### Grand Total: ₹{grand_total}")
 
         uploaded_file = st.file_uploader("Upload Hand Made Design", type=['png', 'jpg', 'jpeg'], key="design_upload")
+        if uploaded_file:
+            st.image(uploaded_file, caption="Hand Made Design", use_container_width=True)
+
         col_clr, col_prnt = st.columns(2)
         if col_clr.button("🗑️ Clear Cart", type="primary", use_container_width=True): st.session_state.cart = []; st.rerun()
 
@@ -153,7 +164,6 @@ elif st.session_state.page == "cart":
             pdf.multi_cell(190, 10, f"Remarks: {special_remarks}")
             pdf.ln(5)
             
-            # Table Headers
             pdf.set_font("Arial", "B", 12)
             pdf.cell(100, 10, "Product (Code)", 1)
             pdf.cell(20, 10, "Qty", 1, 0, "C")
@@ -164,14 +174,10 @@ elif st.session_state.page == "cart":
             for item in st.session_state.cart:
                 x_start = pdf.get_x()
                 y_start = pdf.get_y()
-                
-                # Wrap product name + code
                 full_desc = f"{item['name']} ({item['id']})"
                 pdf.multi_cell(100, 10, full_desc, 1)
                 y_end = pdf.get_y()
                 row_height = y_end - y_start
-                
-                # Move back to fill other columns
                 pdf.set_xy(x_start + 100, y_start)
                 pdf.cell(20, row_height, str(item['qty']), 1, 0, "C")
                 pdf.cell(35, row_height, f"Rs.{item['price']}", 1, 0, "C")
@@ -188,11 +194,8 @@ elif st.session_state.page == "cart":
             
             pdf_bytes = pdf.output(dest='S').encode('latin-1')
             b64 = base64.b64encode(pdf_bytes).decode('latin-1')
-            
-            # Filename formatting
             fn_name = customer_name.replace(" ", "_") if customer_name.strip() else ""
             filename = f"{fn_name}_{curr_date}.pdf" if fn_name else f"{curr_date}.pdf"
-            
             href = f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px;">Click here to Download PDF</button></a>'
             st.markdown(href, unsafe_allow_html=True)
 
