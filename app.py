@@ -21,12 +21,8 @@ local_css("style.css")
 @st.cache_data
 def load_data():
     path = "design_material_mapping_06.xlsx"
-    if not os.path.exists(path):
-        path = "/content/design_material_mapping_06.xlsx"
-
-    if not os.path.exists(path):
-        st.error(f"File not found: {path}")
-        st.stop()
+    if not os.path.exists(path): path = "/content/design_material_mapping_06.xlsx"
+    if not os.path.exists(path): st.error(f"File not found: {path}"); st.stop()
 
     designs = pd.read_excel(path, sheet_name=0)
     materials = pd.read_excel(path, sheet_name=1)
@@ -36,22 +32,18 @@ def load_data():
         df.columns = [str(c).strip().lower().replace(' ', '_') for c in df.columns]
         return df
 
-    designs = clean_df(designs)
-    materials = clean_df(materials)
-    mapping = clean_df(mapping)
+    designs = clean_df(designs); materials = clean_df(materials); mapping = clean_df(mapping)
 
     for df in [designs, mapping, materials]:
         for col in df.columns:
-            if 'code' in col:
-                df[col] = df[col].astype(str).str.strip()
+            if 'code' in col: df[col] = df[col].astype(str).str.strip()
 
     return designs, materials, mapping
 
 try:
     df_design, df_material, df_mapping = load_data()
 except Exception as e:
-    st.error(f"Error loading Excel: {e}")
-    st.stop()
+    st.error(f"Error loading Excel: {e}"); st.stop()
 
 # Session State
 if "cart" not in st.session_state: st.session_state.cart = []
@@ -65,8 +57,8 @@ st.markdown(f'<div class="cart-icon">🛒 {total_items}</div>', unsafe_allow_htm
 
 if st.session_state.page == "design_select":
     st.title("Select Design")
-    mask_pub = df_design['published'].astype(str).str.strip().str.upper() == 'YES' if 'published' in df_design.columns else True
-    mask_act = df_design['active'].astype(str).str.strip().str.upper() == 'YES' if 'active' in df_design.columns else True
+    mask_pub = df_design["published"].astype(str).str.strip().str.upper() == "YES" if "published" in df_design.columns else True
+    mask_act = df_design["active"].astype(str).str.strip().str.upper() == "YES" if "active" in df_design.columns else True
     active_designs = df_design[mask_pub & mask_act]
     design_names = active_designs["design_name"].unique().tolist() if "design_name" in active_designs.columns else []
     selected_name = st.selectbox("Choose a design", ["-- Select --"] + design_names)
@@ -74,14 +66,11 @@ if st.session_state.page == "design_select":
         design_row = active_designs[active_designs["design_name"] == selected_name]
         st.session_state.selected_design = str(design_row["design_code"].values[0])
         st.session_state.selected_design_name = selected_name
-        if st.button("Next"):
-            st.session_state.page = "material_listing"
-            st.rerun()
+        if st.button("Next"): st.session_state.page = "material_listing"; st.rerun()
 
 elif st.session_state.page == "material_listing":
     st.title("Materials")
-    if st.session_state.selected_design_name:
-        st.subheader(st.session_state.selected_design_name)
+    if st.session_state.selected_design_name: st.subheader(st.session_state.selected_design_name)
 
     c_back, c_cart = st.columns([1,1])
     if c_back.button("← Back"): st.session_state.page = "design_select"; st.rerun()
@@ -97,8 +86,7 @@ elif st.session_state.page == "material_listing":
         st.warning("No materials mapped for this design.")
     else:
         for i, row in listing.iterrows():
-            price = row.get('price', 0)
-            m_id = row.get(m_crm_col)
+            price = row.get("price", 0); m_id = row.get(m_crm_col)
             with st.container():
                 st.markdown(f"<div class='card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {m_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
                 qty = st.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
@@ -107,18 +95,15 @@ elif st.session_state.page == "material_listing":
                     for item in st.session_state.cart:
                         if item["id"] == m_id: item["qty"] += qty; found = True; break
                     if not found:
-                        st.session_state.cart.append({"name": row.get('material_name'), "qty": qty, "id": m_id, "price": float(price)})
+                        st.session_state.cart.append({"name": row.get("material_name"), "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
         
         st.divider()
-        if st.button("View Cart 🛒", key="view_cart_bottom"):
-            st.session_state.page = "cart"
-            st.rerun()
+        if st.button("View Cart 🛒", key="view_cart_bottom"): st.session_state.page = "cart"; st.rerun()
 
 elif st.session_state.page == "cart":
     st.title("Your Cart")
-    if st.session_state.selected_design_name:
-        st.subheader(st.session_state.selected_design_name)
+    if st.session_state.selected_design_name: st.subheader(st.session_state.selected_design_name)
 
     customer_name = st.text_input("Customer Name", key="customer_name_input")
     special_remarks = st.text_area("Special Remarks", key="special_remarks_input")
@@ -129,21 +114,20 @@ elif st.session_state.page == "cart":
     else:
         grand_total = 0
         for i, item in enumerate(st.session_state.cart):
-            item_total = item['price'] * item['qty']
-            grand_total += item_total
+            item_total = item["price"] * item["qty"]; grand_total += item_total
             with st.container():
                 col1, col2 = st.columns([2, 1])
                 col1.markdown(f"**{item['name']}**<br>₹{item['price']} x {item['qty']} = ₹{item_total}", unsafe_allow_html=True)
-                new_qty = col2.number_input("Edit Qty", min_value=0, value=item['qty'], key=f"edit_{i}")
-                if new_qty != item['qty']:
+                new_qty = col2.number_input("Edit Qty", min_value=0, value=item["qty"], key=f"edit_{i}")
+                if new_qty != item["qty"]:
                     if new_qty == 0: st.session_state.cart.pop(i)
-                    else: st.session_state.cart[i]['qty'] = new_qty
+                    else: st.session_state.cart[i]["qty"] = new_qty
                     st.rerun()
 
         st.divider()
         st.markdown(f"### Grand Total: ₹{grand_total}")
 
-        uploaded_file = st.file_uploader("Upload Hand Made Design", type=['png', 'jpg', 'jpeg'], key="design_upload")
+        uploaded_file = st.file_uploader("Upload Hand Made Design", type=["png", "jpg", "jpeg"], key="design_upload")
         if uploaded_file:
             st.image(uploaded_file, caption="Hand Made Design", use_container_width=True)
 
@@ -152,51 +136,40 @@ elif st.session_state.page == "cart":
 
         if col_prnt.button("🖨️ Print PDF", use_container_width=True):
             pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", "B", 16)
+            pdf.add_page(); pdf.set_font("Arial", "B", 16)
             pdf.cell(190, 10, "Wakefit Quotation", 0, 1, "C")
-            pdf.set_font("Arial", "", 12)
-            pdf.ln(5)
+            pdf.set_font("Arial", "", 12); pdf.ln(5)
             pdf.cell(190, 10, f"Customer Name: {customer_name}", 0, 1)
             pdf.cell(190, 10, f"Design: {st.session_state.selected_design_name}", 0, 1)
             curr_date = date.today().strftime('%d-%m-%Y')
             pdf.cell(190, 10, f"Date: {curr_date}", 0, 1)
-            pdf.multi_cell(190, 10, f"Remarks: {special_remarks}")
-            pdf.ln(5)
+            pdf.multi_cell(190, 10, f"Remarks: {special_remarks}"); pdf.ln(5)
             
             pdf.set_font("Arial", "B", 12)
-            pdf.cell(100, 10, "Product (Code)", 1)
-            pdf.cell(20, 10, "Qty", 1, 0, "C")
-            pdf.cell(35, 10, "Price", 1, 0, "C")
-            pdf.cell(35, 10, "Total", 1, 1, "C")
-
+            pdf.cell(100, 10, "Product (Code)", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
+            
             pdf.set_font("Arial", "", 10)
             for item in st.session_state.cart:
-                x_start = pdf.get_x()
-                y_start = pdf.get_y()
+                xs, ys = pdf.get_x(), pdf.get_y()
                 full_desc = f"{item['name']} ({item['id']})"
                 pdf.multi_cell(100, 10, full_desc, 1)
-                y_end = pdf.get_y()
-                row_height = y_end - y_start
-                pdf.set_xy(x_start + 100, y_start)
-                pdf.cell(20, row_height, str(item['qty']), 1, 0, "C")
-                pdf.cell(35, row_height, f"Rs.{item['price']}", 1, 0, "C")
-                pdf.cell(35, row_height, f"Rs.{item['price'] * item['qty']}", 1, 1, "C")
+                ye = pdf.get_y(); rh = ye - ys
+                pdf.set_xy(xs + 100, ys)
+                pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price'] * item['qty']}", 1, 1, "C")
 
             pdf.set_font("Arial", "B", 12)
-            pdf.cell(155, 10, "Grand Total", 1, 0, "R")
-            pdf.cell(35, 10, f"Rs.{grand_total}", 1, 1, "C")
+            pdf.cell(155, 10, "Grand Total", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{grand_total}", 1, 1, "C")
             
             if uploaded_file:
-                temp_path = "temp_design.png"
-                with open(temp_path, "wb") as f: f.write(uploaded_file.getbuffer())
-                pdf.ln(10); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(temp_path, x=10, w=100)
+                ext = uploaded_file.name.split('.')[-1]
+                tp = f"temp_design.{ext}"
+                with open(tp, "wb") as f: f.write(uploaded_file.getbuffer())
+                pdf.ln(10); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(tp, x=10, w=100)
             
-            pdf_bytes = pdf.output(dest='S').encode('latin-1')
-            b64 = base64.b64encode(pdf_bytes).decode('latin-1')
-            fn_name = customer_name.replace(" ", "_") if customer_name.strip() else ""
-            filename = f"{fn_name}_{curr_date}.pdf" if fn_name else f"{curr_date}.pdf"
-            href = f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px;">Click here to Download PDF</button></a>'
+            pdf_bytes = pdf.output(dest='S').encode('latin-1'); b64 = base64.b64encode(pdf_bytes).decode('latin-1')
+            fn = customer_name.replace(" ", "_") if customer_name.strip() else ""
+            fname = f"{fn}_{curr_date}.pdf" if fn else f"{curr_date}.pdf"
+            href = f'<a href="data:application/octet-stream;base64,{b64}" download="{fname}"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px;">Click here to Download PDF</button></a>'
             st.markdown(href, unsafe_allow_html=True)
 
         if st.button("Back"): st.session_state.page = "material_listing"; st.rerun()
