@@ -20,8 +20,8 @@ local_css("style.css")
 # Load Data
 @st.cache_data
 def load_data():
-    path = "design_material_mapping_10.xlsx"
-    if not os.path.exists(path): path = "/content/design_material_mapping_10.xlsx"
+    path = "design_material_mapping_10_1.xlsx"
+    if not os.path.exists(path): path = "/content/design_material_mapping_10_1.xlsx"
     if not os.path.exists(path): st.error(f"File not found: {path}"); st.stop()
 
     designs = pd.read_excel(path, sheet_name=0)
