@@ -58,8 +58,8 @@ st.markdown(f'<div class="cart-icon">🛒 {total_items}</div>', unsafe_allow_htm
 # Helper to display logo on Streamlit pages
 def display_logo():
     st.markdown("""
-        <div style='position: fixed; top: 10px; left: 10px; z-index: 1001;'>
-            <img src='https://www.wakefit.co/favicon.ico' alt='Wakefit Logo' width='40'>
+        <div style='position: fixed; top: 10px; right: 10px; z-index: 1001; padding: 5px; background-color: rgba(255,255,255,0.8); border-radius: 5px;'>
+            <img src='wakefit logo.png' alt='Wakefit Logo' width='80'>
         </div>
     """, unsafe_allow_html=True)
 
@@ -149,7 +149,7 @@ elif st.session_state.page == "cart":
         if col_prnt.button("🖨️ Print PDF", use_container_width=True):
             pdf = FPDF()
             pdf.add_page()
-            pdf.image('https://www.wakefit.co/favicon.ico', x=10, y=10, w=15) # Logo at top-left of PDF
+            pdf.image('wakefit logo.png', x=175, y=10, w=25) # Logo at top-right of PDF, using local file and adjusted x-coordinate
             pdf.set_font("Arial", "B", 16)
             pdf.set_xy(30, 15) # Position for title next to logo
             pdf.cell(0, 10, "Wakefit Quotation", 0, 1, "C") # Center title, 0 width means till right margin
