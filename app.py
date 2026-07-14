@@ -55,7 +55,17 @@ if "selected_design_name" not in st.session_state: st.session_state.selected_des
 total_items = sum(item['qty'] for item in st.session_state.cart)
 st.markdown(f'<div class="cart-icon">🛒 {total_items}</div>', unsafe_allow_html=True)
 
+# Helper to display logo on Streamlit pages
+def display_logo():
+    st.markdown("""
+        <div style='position: fixed; top: 10px; left: 10px; z-index: 1001;'>
+            <img src='https://www.wakefit.co/favicon.ico' alt='Wakefit Logo' width='40'>
+        </div>
+    """, unsafe_allow_html=True)
+
+
 if st.session_state.page == "design_select":
+    display_logo()
     st.title("Select Design")
     mask_pub = df_design["published"].astype(str).str.strip().str.upper() == "YES" if "published" in df_design.columns else True
     mask_act = df_design["active"].astype(str).str.strip().str.upper() == "YES" if "active" in df_design.columns else True
@@ -69,6 +79,7 @@ if st.session_state.page == "design_select":
         if st.button("Next"): st.session_state.page = "material_listing"; st.rerun()
 
 elif st.session_state.page == "material_listing":
+    display_logo()
     st.title("Materials")
     if st.session_state.selected_design_name: st.subheader(st.session_state.selected_design_name)
 
@@ -97,11 +108,12 @@ elif st.session_state.page == "material_listing":
                     if not found:
                         st.session_state.cart.append({"name": row.get("material_name"), "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
-        
+
         st.divider()
         if st.button("View Cart 🛒", key="view_cart_bottom"): st.session_state.page = "cart"; st.rerun()
 
 elif st.session_state.page == "cart":
+    display_logo()
     st.title("Your Cart")
     if st.session_state.selected_design_name: st.subheader(st.session_state.selected_design_name)
 
@@ -136,18 +148,22 @@ elif st.session_state.page == "cart":
 
         if col_prnt.button("🖨️ Print PDF", use_container_width=True):
             pdf = FPDF()
-            pdf.add_page(); pdf.set_font("Arial", "B", 16)
-            pdf.cell(190, 10, "Wakefit Quotation", 0, 1, "C")
-            pdf.set_font("Arial", "", 12); pdf.ln(5)
+            pdf.add_page()
+            pdf.image('https://www.wakefit.co/favicon.ico', x=10, y=10, w=15) # Logo at top-left of PDF
+            pdf.set_font("Arial", "B", 16)
+            pdf.set_xy(30, 15) # Position for title next to logo
+            pdf.cell(0, 10, "Wakefit Quotation", 0, 1, "C") # Center title, 0 width means till right margin
+            pdf.ln(5) # Add a line break after the title for spacing
+            pdf.set_font("Arial", "", 12)
             pdf.cell(190, 10, f"Customer Name: {customer_name}", 0, 1)
             pdf.cell(190, 10, f"Design: {st.session_state.selected_design_name}", 0, 1)
             curr_date = date.today().strftime('%d-%m-%Y')
             pdf.cell(190, 10, f"Date: {curr_date}", 0, 1)
             pdf.multi_cell(190, 10, f"Remarks: {special_remarks}"); pdf.ln(5)
-            
+
             pdf.set_font("Arial", "B", 12)
             pdf.cell(100, 10, "Product (Code)", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
-            
+
             pdf.set_font("Arial", "", 10)
             for item in st.session_state.cart:
                 xs, ys = pdf.get_x(), pdf.get_y()
@@ -159,13 +175,13 @@ elif st.session_state.page == "cart":
 
             pdf.set_font("Arial", "B", 12)
             pdf.cell(155, 10, "Grand Total", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{grand_total}", 1, 1, "C")
-            
+
             if uploaded_file:
                 ext = uploaded_file.name.split('.')[-1]
                 tp = f"temp_design.{ext}"
                 with open(tp, "wb") as f: f.write(uploaded_file.getbuffer())
                 pdf.ln(10); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(tp, x=10, w=100)
-            
+
             pdf_bytes = pdf.output(dest='S').encode('latin-1'); b64 = base64.b64encode(pdf_bytes).decode('latin-1')
             fn = customer_name.replace(" ", "_") if customer_name.strip() else ""
             fname = f"{fn}_{curr_date}.pdf" if fn else f"{curr_date}.pdf"
