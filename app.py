@@ -144,6 +144,14 @@ elif st.session_state.page == "cart":
         st.divider()
         st.markdown(f"### Grand Total: ₹{grand_total}")
 
+        # Discount Section
+        discount_percentage = st.number_input("Discount Percentage (%)", min_value=0.0, max_value=100.0, value=0.0, step=0.1, key="discount_input")
+        discount_amount = (grand_total * discount_percentage) / 100
+        final_total = grand_total - discount_amount
+
+        st.markdown(f"### Discount: ₹{discount_amount:,.2f} ({discount_percentage:.1f}%) ")
+        st.markdown(f"## Final Amount: ₹{final_total:,.2f}")
+
         uploaded_file = st.file_uploader("Upload Hand Made Design", type=["png", "jpg", "jpeg"], key="design_upload")
         if uploaded_file:
             st.image(uploaded_file, caption="Hand Made Design", use_container_width=True)
@@ -179,7 +187,13 @@ elif st.session_state.page == "cart":
                 pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price'] * item['qty']}", 1, 1, "C")
 
             pdf.set_font("Arial", "B", 12)
-            pdf.cell(155, 10, "Grand Total", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{grand_total}", 1, 1, "C")
+            pdf.cell(155, 10, "Grand Total", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{grand_total:,.2f}", 1, 1, "C")
+            
+            if discount_percentage > 0:
+                pdf.set_font("Arial", "", 10)
+                pdf.cell(155, 10, f"Discount ({discount_percentage:.1f}%) ", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{discount_amount:,.2f}", 1, 1, "C")
+                pdf.set_font("Arial", "B", 12)
+                pdf.cell(155, 10, "Final Amount", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{final_total:,.2f}", 1, 1, "C")
 
             if uploaded_file:
                 ext = uploaded_file.name.split('.')[-1]
