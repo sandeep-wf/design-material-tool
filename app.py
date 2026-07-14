@@ -58,7 +58,7 @@ st.markdown(f'<div class="cart-icon">🛒 {total_items}</div>', unsafe_allow_htm
 # Helper to display logo on Streamlit pages
 def display_logo():
     st.markdown("""
-        <div style='position: fixed; top: 10px; right: 10px; z-index: 1001; padding: 5px; background-color: rgba(255,255,255,0.8); border-radius: 5px;'>
+        <div style='position: fixed; top: 70px; right: 10px; z-index: 1001; padding: 5px; background-color: rgba(255,255,255,0.8); border-radius: 5px;'>
             <img src='wakefit logo.png' alt='Wakefit Logo' width='80'>
         </div>
     """, unsafe_allow_html=True)
