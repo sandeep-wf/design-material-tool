@@ -56,9 +56,14 @@ if "page" not in st.session_state: st.session_state.page = "design_select"
 if "selected_design" not in st.session_state: st.session_state.selected_design = None
 if "selected_design_name" not in st.session_state: st.session_state.selected_design_name = None
 
-# UI Header
+# UI Header - Clickable Sticky Cart Button
 total_items = sum(item['qty'] for item in st.session_state.cart)
-st.markdown(f'<div class="cart-icon">🛒 {total_items}</div>', unsafe_allow_html=True)
+with st.sidebar:
+    # Using a container or columns to float a button is tricky in Streamlit, 
+    # so we use a standard button in a fixed-like position via CSS class.
+    if st.button(f"🛒 Cart ({total_items})", key="sticky_cart_btn"):
+        st.session_state.page = "cart"
+        st.rerun()
 
 # Helper to display logo
 def display_logo():
@@ -73,10 +78,14 @@ def display_footer():
 
 if st.session_state.page == "design_select":
     display_logo(); st.title("Select Design")
-    design_names = df_design["design_name"].unique().tolist() if "design_name" in df_design.columns else []
+    mask_pub = df_design["published"].astype(str).str.strip().str.upper() == "YES" if "published" in df_design.columns else True
+    mask_act = df_design["active"].astype(str).str.strip().str.upper() == "YES" if "active" in df_design.columns else True
+    active_designs = df_design[mask_pub & mask_act]
+    
+    design_names = active_designs["design_name"].unique().tolist() if "design_name" in active_designs.columns else []
     selected_name = st.selectbox("Choose a design", ["-- Select --"] + design_names)
     if selected_name != "-- Select --":
-        design_row = df_design[df_design["design_name"] == selected_name]
+        design_row = active_designs[active_designs["design_name" ] == selected_name]
         st.session_state.selected_design = str(design_row["design_code"].values[0])
         st.session_state.selected_design_name = selected_name
         if st.button("Next"): st.session_state.page = "material_listing"; st.rerun()
@@ -154,8 +163,7 @@ elif st.session_state.page == "cart":
 
             if uploaded_file:
                 tp = "temp_design.png"
-                with open(tp, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
+                with open(tp, "wb") as f: f.write(uploaded_file.getbuffer())
                 pdf.ln(5); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(tp, x=10, w=100)
 
             pdf.ln(10); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
