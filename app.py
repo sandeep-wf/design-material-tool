@@ -56,14 +56,11 @@ if "page" not in st.session_state: st.session_state.page = "design_select"
 if "selected_design" not in st.session_state: st.session_state.selected_design = None
 if "selected_design_name" not in st.session_state: st.session_state.selected_design_name = None
 
-# UI Header - Clickable Sticky Cart Button
+# UI Header - Clickable Sticky Cart Button (Main Container)
 total_items = sum(item['qty'] for item in st.session_state.cart)
-with st.sidebar:
-    # Using a container or columns to float a button is tricky in Streamlit, 
-    # so we use a standard button in a fixed-like position via CSS class.
-    if st.button(f"🛒 Cart ({total_items})", key="sticky_cart_btn"):
-        st.session_state.page = "cart"
-        st.rerun()
+if st.button(f"🛒 Cart ({total_items})", key="sticky_cart_btn"):
+    st.session_state.page = "cart"
+    st.rerun()
 
 # Helper to display logo
 def display_logo():
