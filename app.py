@@ -63,8 +63,8 @@ st.markdown(f'<div class="cart-icon">🛒 {total_items}</div>', unsafe_allow_htm
 # Helper to display logo
 def display_logo():
     try:
-        with open('wakefit logo.png', 'rb') as f:
-            logo_base64 = base64.b64encode(f.read()).decode('utf-8')
+        with open("wakefit logo.png", "rb") as f:
+            logo_base64 = base64.b64encode(f.read()).decode("utf-8")
         st.markdown(f"""<div style='position: fixed; top: 70px; right: 10px; z-index: 1001; padding: 5px; background-color: rgba(255,255,255,0.8); border-radius: 5px;'><img src='data:image/png;base64,{logo_base64}' alt='Wakefit Logo' width='80'></div>""", unsafe_allow_html=True)
     except FileNotFoundError: st.error("Wakefit logo file 'wakefit logo.png' not found.")
 
@@ -153,7 +153,9 @@ elif st.session_state.page == "cart":
             for point in disclaimer_txt: pdf.multi_cell(190, 7, point)
 
             if uploaded_file:
-                tp = "temp_design.png"; with open(tp, "wb") as f: f.write(uploaded_file.getbuffer())
+                tp = "temp_design.png"
+                with open(tp, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
                 pdf.ln(5); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(tp, x=10, w=100)
 
             pdf.ln(10); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
