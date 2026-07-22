@@ -1,52 +1,30 @@
-.stApp {
-    background-color: #FFFFFF;
-}
-.main {
-    color: #1A237E;
-    font-family: 'Inter', sans-serif;
-}
-
-/* Reliable Fixed Positioning for Cart Buttons */
-/* Target the parent container of the buttons to pull them out of the scroll flow */
-div[data-testid="stVerticalBlock"] > div:has(button[key="sticky_cart_btn"]),
-div[data-testid="stVerticalBlock"] > div:has(button[key="view_cart_top"]) {
-    position: fixed !important;
-    top: 70px !important;
-    left: 20px !important;
-    z-index: 999999 !important;
-    width: auto !important;
-}
-
-/* Styling to ensure the button is highly visible while fixed */
-button[key="sticky_cart_btn"],
-button[key="view_cart_top"] {
-    background-color: #FFD54F !important;
-    color: #1A237E !important;
-    font-weight: bold !important;
-    border-radius: 25px !important;
-    padding: 10px 20px !important;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.3) !important;
-    border: 2px solid #1A237E !important;
-    width: auto !important;
-}
-
-.stButton>button {
-    background-color: #1A237E;
-    color: white;
-    border-radius: 8px;
-    width: 100%;
-    border: none;
-    padding: 0.5rem;
-    font-weight: 600;
-}
-.stButton>button:hover {
-    background-color: #FFD54F;
-    color: #1A237E;
-}
-.card {
-    background: white;
-    padding: 15px;
-    border-radius: 12px;
-    box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
-    margin-bottom: 15px;
-}
+/* Wakefit Theme Colors: Navy Blue #1A237E, Yellow/Gold #FFD54F */
+    .stApp {
+        background-color: #FFFFFF;
+    }
+    .main {
+        color: #1A237E;
+    }
+    .stButton>button {
+        background-color: #1A237E;
+        color: white;
+        border-radius: 8px;
+    }
+    .cart-icon {
+        position: fixed;
+        top: 70px;
+        left: 10px;
+        background: #FFD54F;
+        padding: 10px 20px;
+        border-radius: 20px;
+        z-index: 1000;
+        font-weight: bold;
+        box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+    }
+    .card {
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
+    }
