@@ -20,8 +20,8 @@ local_css("style.css")
 # Load Data
 @st.cache_data
 def load_data():
-    path = "design-material-mapping_22_1.xlsx"
-    if not os.path.exists(path): path = "/content/design-material-mapping_22_1.xlsx"
+    path = "design-material-mapping_22_2.xlsx"
+    if not os.path.exists(path): path = "/content/design-material-mapping_22_2.xlsx"
     if not os.path.exists(path):
         st.warning(f"File not found: {path}. Creating dummy data.")
         with pd.ExcelWriter(path) as writer:
