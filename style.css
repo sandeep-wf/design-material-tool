@@ -6,28 +6,28 @@
     font-family: 'Inter', sans-serif;
 }
 
-/* Floating/Sticky Cart Button Logic */
-/* Target the specific container for the sticky cart button */
+/* Enhanced Sticky Cart Button Logic */
+/* This targets the Streamlit container to force fixed positioning */
 div[data-testid="stVerticalBlock"] > div:has(button[key="sticky_cart_btn"]),
 div[data-testid="stVerticalBlock"] > div:has(button[key="view_cart_top"]) {
     position: fixed !important;
-    top: 60px !important;
+    top: 70px !important;
     left: 20px !important;
     z-index: 999999 !important;
     width: auto !important;
 }
 
-/* Styling the button specifically */
+/* Visual styling for the sticky button */
 button[key="sticky_cart_btn"],
 button[key="view_cart_top"] {
     background-color: #FFD54F !important;
     color: #1A237E !important;
     font-weight: bold !important;
-    border-radius: 20px !important;
+    border-radius: 25px !important;
     padding: 10px 20px !important;
-    box-shadow: 0px 4px 10px rgba(0,0,0,0.3) !important;
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.3) !important;
+    border: 2px solid #1A237E !important;
     width: auto !important;
-    border: none !important;
 }
 
 .stButton>button {
