@@ -6,8 +6,8 @@
     font-family: 'Inter', sans-serif;
 }
 
-/* Enhanced Sticky Cart Button Logic */
-/* This targets the Streamlit container to force fixed positioning */
+/* Reliable Fixed Positioning for Cart Buttons */
+/* Target the parent container of the buttons to pull them out of the scroll flow */
 div[data-testid="stVerticalBlock"] > div:has(button[key="sticky_cart_btn"]),
 div[data-testid="stVerticalBlock"] > div:has(button[key="view_cart_top"]) {
     position: fixed !important;
@@ -17,7 +17,7 @@ div[data-testid="stVerticalBlock"] > div:has(button[key="view_cart_top"]) {
     width: auto !important;
 }
 
-/* Visual styling for the sticky button */
+/* Styling to ensure the button is highly visible while fixed */
 button[key="sticky_cart_btn"],
 button[key="view_cart_top"] {
     background-color: #FFD54F !important;
