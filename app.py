@@ -134,7 +134,7 @@ elif st.session_state.page == "cart":
             st.write(f"{item['name']} x {item['qty']} = ₹{item_total}")
 
         st.divider()
-        dp = st.number_input("Discount %", 0.0, 100.0, value=None, placeholder="0.0", step=0.1); 
+        dp = st.number_input("Discount %", 0.0, 100.0, value=None, placeholder="0.0", step=0.1);
         dp_val = dp if dp is not None else 0.0
         da = (grand_total * dp_val) / 100; ft = grand_total - da
         st.markdown(f"### Total: ₹{ft:,.2f}")
@@ -184,5 +184,8 @@ elif st.session_state.page == "cart":
 
         c_back, c_home = st.columns(2)
         if c_back.button("Back", key="back_btn"): st.session_state.page = "material_listing"; st.rerun()
-        if c_home.button("Home", key="home_btn"): st.session_state.page = "design_select"; st.rerun()
+        if c_home.button("Home", key="home_btn"):
+            st.session_state.cart = []
+            st.session_state.page = "design_select"
+            st.rerun()
     display_footer()
