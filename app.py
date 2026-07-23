@@ -110,7 +110,7 @@ elif st.session_state.page == "material_listing":
                 if st.button("Add to Cart", key=f"add_{i}"):
                     found = False
                     for item in st.session_state.cart:
-                        if item["id"] == m_id: item["qty"] += qty; found = True; break
+                        if item["id" ] == m_id: item["qty"] += qty; found = True; break
                     if not found: st.session_state.cart.append({"name": row.get("material_name"), "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
     display_footer()
@@ -133,7 +133,7 @@ elif st.session_state.page == "cart":
         st.divider()
         dp = st.number_input("Discount %", 0.0, 100.0, 0.0, step=0.1); da = (grand_total * dp) / 100; ft = grand_total - da
         st.markdown(f"### Total: ₹{ft:,.2f}")
-        uploaded_file = st.file_uploader("Hand Made Design Image")
+        uploaded_file = st.file_uploader("Hand Made Design Image", type=["png", "jpg", "jpeg"])
 
         if st.button("🖨️ Print PDF", use_container_width=True):
             pdf = FPDF(); pdf.add_page(); pdf.image('wakefit logo.png', x=175, y=10, w=25)
@@ -159,20 +159,21 @@ elif st.session_state.page == "cart":
             for point in disclaimer_txt: pdf.multi_cell(190, 7, point)
 
             if uploaded_file:
-                tp = "temp_design.png"
+                ext = uploaded_file.name.split('.')[-1]
+                tp = f"temp_design.{ext}"
                 with open(tp, "wb") as f: f.write(uploaded_file.getbuffer())
                 pdf.ln(5); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(tp, x=10, w=100)
 
             pdf.ln(10); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
-            
+
             b64 = base64.b64encode(pdf.output(dest='S').encode('latin-1')).decode('latin-1')
-            
+
             # Dynamic Filename generation
             today_str = date.today().strftime('%d-%m-%Y')
             clean_cust = customer_name.replace(' ', '_').strip() if customer_name else "Customer"
             clean_partner = partner_name.replace(' ', '_').strip() if partner_name else "Partner"
             filename = f"{clean_cust}_{clean_partner}_{today_str}.pdf"
-            
+
             href = f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px;">Download PDF</button></a>'
             st.markdown(href, unsafe_allow_html=True)
         if st.button("Back"): st.session_state.page = "material_listing"; st.rerun()
