@@ -140,6 +140,9 @@ elif st.session_state.page == "cart":
         st.markdown(f"### Total: ₹{ft:,.2f}")
         uploaded_file = st.file_uploader("Hand Made Design Image", type=["png", "jpg", "jpeg"])
 
+        if uploaded_file:
+            st.image(uploaded_file, caption="Uploaded Design Preview", use_container_width=True)
+
         if st.button("🖨️ Print PDF", use_container_width=True):
             pdf = FPDF(); pdf.add_page(); pdf.image('wakefit logo.png', x=175, y=10, w=25)
             pdf.set_font("Arial", "B", 16); pdf.set_xy(30, 15); pdf.cell(0, 10, "Wakefit Quotation", 0, 1, "C"); pdf.ln(5)
