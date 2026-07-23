@@ -113,7 +113,7 @@ elif st.session_state.page == "material_listing":
                         if item["id" ] == m_id: item["qty"] += qty; found = True; break
                     if not found: st.session_state.cart.append({"name": row.get("material_name"), "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
-        if st.button("View Cart 🛒", key="view_cart_bottom"): 
+        if st.button("View Cart 🛒", key="view_cart_bottom"):
             st.session_state.page = "cart"
             st.rerun()
     display_footer()
@@ -134,7 +134,9 @@ elif st.session_state.page == "cart":
             st.write(f"{item['name']} x {item['qty']} = ₹{item_total}")
 
         st.divider()
-        dp = st.number_input("Discount %", 0.0, 100.0, 0.0, step=0.1); da = (grand_total * dp) / 100; ft = grand_total - da
+        dp = st.number_input("Discount %", 0.0, 100.0, value=None, placeholder="0.0", step=0.1); 
+        dp_val = dp if dp is not None else 0.0
+        da = (grand_total * dp_val) / 100; ft = grand_total - da
         st.markdown(f"### Total: ₹{ft:,.2f}")
         uploaded_file = st.file_uploader("Hand Made Design Image", type=["png", "jpg", "jpeg"])
 
@@ -151,8 +153,8 @@ elif st.session_state.page == "cart":
                 pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']*item['qty']}", 1, 1, "C")
 
             pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Grand Total", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{grand_total:,.2f}", 1, 1, "C")
-            if dp > 0:
-                pdf.set_font("Arial", "", 10); pdf.cell(155, 10, f"Discount ({dp}%)", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{da:,.2f}", 1, 1, "C")
+            if dp_val > 0:
+                pdf.set_font("Arial", "", 10); pdf.cell(155, 10, f"Discount ({dp_val}%)", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{da:,.2f}", 1, 1, "C")
                 pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Final Amount", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{ft:,.2f}", 1, 1, "C")
 
             # Static Disclaimer Section
