@@ -113,6 +113,9 @@ elif st.session_state.page == "material_listing":
                         if item["id" ] == m_id: item["qty"] += qty; found = True; break
                     if not found: st.session_state.cart.append({"name": row.get("material_name"), "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
+        if st.button("View Cart 🛒", key="view_cart_bottom"): 
+            st.session_state.page = "cart"
+            st.rerun()
     display_footer()
 
 elif st.session_state.page == "cart":
@@ -176,7 +179,7 @@ elif st.session_state.page == "cart":
 
             href = f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px;">Download PDF</button></a>'
             st.markdown(href, unsafe_allow_html=True)
-            
+
         c_back, c_home = st.columns(2)
         if c_back.button("Back", key="back_btn"): st.session_state.page = "material_listing"; st.rerun()
         if c_home.button("Home", key="home_btn"): st.session_state.page = "design_select"; st.rerun()
