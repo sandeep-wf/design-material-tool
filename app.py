@@ -78,7 +78,7 @@ if st.session_state.page == "design_select":
     mask_pub = df_design["published"].astype(str).str.strip().str.upper() == "YES" if "published" in df_design.columns else True
     mask_act = df_design["active"].astype(str).str.strip().str.upper() == "YES" if "active" in df_design.columns else True
     active_designs = df_design[mask_pub & mask_act]
-    
+
     design_names = active_designs["design_name"].unique().tolist() if "design_name" in active_designs.columns else []
     selected_name = st.selectbox("Choose a design", ["-- Select --"] + design_names)
     if selected_name != "-- Select --":
@@ -133,20 +133,20 @@ elif st.session_state.page == "cart":
         st.divider()
         dp = st.number_input("Discount %", 0.0, 100.0, 0.0, step=0.1); da = (grand_total * dp) / 100; ft = grand_total - da
         st.markdown(f"### Total: ₹{ft:,.2f}")
-        uploaded_file = st.file_uploader("Hand Made Design Image", type=["png", "jpg", "jpeg"])
+        uploaded_file = st.file_uploader("Hand Made Design Image")
 
         if st.button("🖨️ Print PDF", use_container_width=True):
             pdf = FPDF(); pdf.add_page(); pdf.image('wakefit logo.png', x=175, y=10, w=25)
             pdf.set_font("Arial", "B", 16); pdf.set_xy(30, 15); pdf.cell(0, 10, "Wakefit Quotation", 0, 1, "C"); pdf.ln(5)
             pdf.set_font("Arial", "", 12); pdf.cell(190, 10, f"Customer: {customer_name}", 0, 1); pdf.cell(190, 10, f"Partner: {partner_name}", 0, 1)
             pdf.cell(190, 10, f"Design: {st.session_state.selected_design_name}", 0, 1); pdf.cell(190, 10, f"Date: {date.today().strftime('%d-%m-%Y')}", 0, 1); pdf.multi_cell(190, 10, f"Remarks: {special_remarks}"); pdf.ln(5)
-            
+
             pdf.set_font("Arial", "B", 12); pdf.cell(100, 10, "Product", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
             pdf.set_font("Arial", "", 10)
             for item in st.session_state.cart:
                 y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f"{item['name']} ({item['id']})", 1); rh = pdf.get_y() - y_pre
                 pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']*item['qty']}", 1, 1, "C")
-            
+
             pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Grand Total", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{grand_total:,.2f}", 1, 1, "C")
             if dp > 0:
                 pdf.set_font("Arial", "", 10); pdf.cell(155, 10, f"Discount ({dp}%)", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{da:,.2f}", 1, 1, "C")
@@ -164,8 +164,16 @@ elif st.session_state.page == "cart":
                 pdf.ln(5); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(tp, x=10, w=100)
 
             pdf.ln(10); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
+            
             b64 = base64.b64encode(pdf.output(dest='S').encode('latin-1')).decode('latin-1')
-            href = f'<a href="data:application/octet-stream;base64,{b64}" download="Quotation.pdf"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px;">Download PDF</button></a>'
+            
+            # Dynamic Filename generation
+            today_str = date.today().strftime('%d-%m-%Y')
+            clean_cust = customer_name.replace(' ', '_').strip() if customer_name else "Customer"
+            clean_partner = partner_name.replace(' ', '_').strip() if partner_name else "Partner"
+            filename = f"{clean_cust}_{clean_partner}_{today_str}.pdf"
+            
+            href = f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px;">Download PDF</button></a>'
             st.markdown(href, unsafe_allow_html=True)
         if st.button("Back"): st.session_state.page = "material_listing"; st.rerun()
     display_footer()
