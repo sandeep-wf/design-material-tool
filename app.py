@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import os
@@ -150,7 +151,10 @@ elif st.session_state.page == "cart":
         if uploaded_file:
             st.image(uploaded_file, caption="Uploaded Design Preview", use_container_width=True)
 
-        if st.button("🖨️ Print PDF", use_container_width=True):
+        col_clr, col_prnt = st.columns(2)
+        if col_clr.button("🗑️ Clear Cart", type="primary", use_container_width=True): st.session_state.cart = []; st.rerun()
+
+        if col_prnt.button("🖨️ Print PDF", use_container_width=True):
             pdf = FPDF(); pdf.add_page(); pdf.image('wakefit logo.png', x=175, y=10, w=25)
             pdf.set_font("Arial", "B", 16); pdf.set_xy(30, 15); pdf.cell(0, 10, "Wakefit Quotation", 0, 1, "C"); pdf.ln(5)
             pdf.set_font("Arial", "", 12); pdf.cell(190, 10, f"Customer: {customer_name}", 0, 1); pdf.cell(190, 10, f"Partner: {partner_name}", 0, 1)
