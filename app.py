@@ -56,6 +56,13 @@ if "page" not in st.session_state: st.session_state.page = "design_select"
 if "selected_design" not in st.session_state: st.session_state.selected_design = None
 if "selected_design_name" not in st.session_state: st.session_state.selected_design_name = None
 
+# Helper to format SKU
+def format_sku(sku):
+    sku_str = str(sku)
+    if len(sku_str) > 4:
+        return f"{sku_str[:-4]}<b style='color: black;'>{sku_str[-4:]}</b>"
+    return f"<b style='color: black;'>{sku_str}</b>"
+
 # UI Header
 def display_header():
     total_items = sum(item['qty'] for item in st.session_state.cart)
@@ -101,7 +108,7 @@ if st.session_state.page == "design_select":
 
 elif st.session_state.page == "material_listing":
     display_logo()
-    design_suffix = f" - {st.session_state.selected_design_name}" if st.session_state.selected_design_name else ""
+    design_suffix = f" ({st.session_state.selected_design_name})" if st.session_state.selected_design_name else ""
     st.markdown(f"### Materials{design_suffix}", unsafe_allow_html=True)
     if st.button("← Back", key="listing_back_top"): st.session_state.page = "design_select"; st.rerun()
 
@@ -116,8 +123,9 @@ elif st.session_state.page == "material_listing":
     else:
         for i, row in listing.iterrows():
             price = row.get("price", 0); m_id = row.get(m_crm_col)
+            formatted_id = format_sku(m_id)
             with st.container():
-                st.markdown(f"<div class='card material-card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {m_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='card material-card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {formatted_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
                 c_qty, c_add = st.columns([1, 2])
                 qty = c_qty.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
                 if c_add.button("Add to Cart", key=f"add_{i}"):
@@ -145,11 +153,12 @@ elif st.session_state.page == "cart":
         grand_total = 0
         for i, item in enumerate(st.session_state.cart):
             item_total = item["price"] * item["qty"]; grand_total += item_total
+            formatted_id = format_sku(item['id'])
             with st.container():
                 st.markdown(f"""
                 <div style='background-color: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 10px; border-left: 5px solid #1A237E;'>
                     <b>{item['name']}</b><br>
-                    <small>SKU: {item['id']}</small><br>
+                    <small>SKU: {formatted_id}</small><br>
                     <span>₹{item['price']} x {item['qty']} = <b>₹{item_total:,.2f}</b></span>
                 </div>
                 """, unsafe_allow_html=True)
