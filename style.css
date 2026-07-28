@@ -6,6 +6,23 @@
     color: #1A237E;
     font-family: 'Inter', sans-serif;
 }
+div[data-testid="stVerticalBlock"] > div:has(button[key="sticky_cart_btn"]) {
+    position: fixed !important;
+    top: 70px !important;
+    left: 10px !important;
+    z-index: 999999 !important;
+    width: auto !important;
+}
+button[key="sticky_cart_btn"] {
+    background-color: #FFD54F !important;
+    color: #1A237E !important;
+    font-weight: bold !important;
+    border-radius: 20px !important;
+    padding: 10px 20px !important;
+    box-shadow: 0px 4px 6px rgba(0,0,0,0.2) !important;
+    width: auto !important;
+    border: none !important;
+}
 .stButton>button {
     background-color: #1A237E;
     color: white;
@@ -68,4 +85,8 @@
 }
 .print-only {
     display: none;
+}
+/* Specific highlight for Material Cards */
+.material-card {
+    border-left: 5px solid #1A237E !important;
 }
