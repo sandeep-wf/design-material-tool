@@ -60,7 +60,6 @@ if "selected_design_name" not in st.session_state: st.session_state.selected_des
 def display_header():
     total_items = sum(item['qty'] for item in st.session_state.cart)
     if st.session_state.page == "cart":
-        # Replace View Cart with Home and Back side-by-side
         col1, col2 = st.columns([1, 1])
         if col1.button("🏠 Home", key="top_home_btn"):
             st.session_state.cart = []
@@ -76,7 +75,6 @@ def display_header():
 
 display_header()
 
-# Helper to display logo
 def display_logo():
     try:
         with open("wakefit logo.png", "rb") as f:
@@ -92,7 +90,6 @@ if st.session_state.page == "design_select":
     mask_pub = df_design["published"].astype(str).str.strip().str.upper() == "YES" if "published" in df_design.columns else True
     mask_act = df_design["active"].astype(str).str.strip().str.upper() == "YES" if "active" in df_design.columns else True
     active_designs = df_design[mask_pub & mask_act]
-
     design_names = active_designs["design_name"].unique().tolist() if "design_name" in active_designs.columns else []
     selected_name = st.selectbox("Choose a design", ["-- Select --"] + design_names)
     if selected_name != "-- Select --":
@@ -103,9 +100,10 @@ if st.session_state.page == "design_select":
     display_footer()
 
 elif st.session_state.page == "material_listing":
-    display_logo(); st.title("Materials")
-    if st.session_state.selected_design_name: st.subheader(st.session_state.selected_design_name)
-    if st.button("← Back", key="listing_back"): st.session_state.page = "design_select"; st.rerun()
+    display_logo()
+    design_suffix = f" ({st.session_state.selected_design_name})" if st.session_state.selected_design_name else ""
+    st.markdown(f"### Materials{design_suffix}", unsafe_allow_html=True)
+    if st.button("← Back", key="listing_back_top"): st.session_state.page = "design_select"; st.rerun()
 
     target_design = st.session_state.selected_design
     m_code_col = "material_code" if "material_code" in df_mapping.columns else "material_crm_code"
@@ -119,17 +117,18 @@ elif st.session_state.page == "material_listing":
         for i, row in listing.iterrows():
             price = row.get("price", 0); m_id = row.get(m_crm_col)
             with st.container():
-                st.markdown(f"<div class='card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {m_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
-                qty = st.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
-                if st.button("Add to Cart", key=f"add_{i}"):
+                st.markdown(f"<div class='card material-card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {m_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
+                c_qty, c_add = st.columns([1, 2])
+                qty = c_qty.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
+                if c_add.button("Add to Cart", key=f"add_{i}"):
                     found = False
                     for item in st.session_state.cart:
-                        if item["id" ] == m_id: item["qty"] += qty; found = True; break
+                        if item["id"] == m_id: item["qty"] += qty; found = True; break
                     if not found: st.session_state.cart.append({"name": row.get("material_name"), "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
-        if st.button("View Cart 🛒", key="view_cart_bottom"):
-            st.session_state.page = "cart"
-            st.rerun()
+        st.divider()
+        if st.button("View Cart 🛒", key="view_cart_bottom"): st.session_state.page = "cart"; st.rerun()
+        if st.button("← Back", key="listing_back_bottom"): st.session_state.page = "design_select"; st.rerun()
     display_footer()
 
 elif st.session_state.page == "cart":
@@ -154,59 +153,45 @@ elif st.session_state.page == "cart":
                     <span>₹{item['price']} x {item['qty']} = <b>₹{item_total:,.2f}</b></span>
                 </div>
                 """, unsafe_allow_html=True)
-
         st.divider()
         dp = st.number_input("Discount %", 0.0, 100.0, value=None, placeholder="0.0", step=0.1);
         dp_val = dp if dp is not None else 0.0
         da = (grand_total * dp_val) / 100; ft = grand_total - da
         st.markdown(f"### Total: ₹{ft:,.2f}")
         uploaded_file = st.file_uploader("Hand Made Design Image", type=["png", "jpg", "jpeg"])
-
         if uploaded_file:
             st.image(uploaded_file, caption="Uploaded Design Preview", use_container_width=True)
-
         col_clr, col_prnt = st.columns(2)
         if col_clr.button("🗑️ Clear Cart", type="primary", use_container_width=True): st.session_state.cart = []; st.rerun()
-
         if col_prnt.button("🖨️ Print PDF", use_container_width=True):
             pdf = FPDF(); pdf.add_page(); pdf.image('wakefit logo.png', x=175, y=10, w=25)
             pdf.set_font("Arial", "B", 16); pdf.set_xy(30, 15); pdf.cell(0, 10, "Wakefit Quotation", 0, 1, "C"); pdf.ln(5)
             pdf.set_font("Arial", "", 12); pdf.cell(190, 10, f"Customer: {customer_name}", 0, 1); pdf.cell(190, 10, f"Partner: {partner_name}", 0, 1)
             pdf.cell(190, 10, f"Design: {st.session_state.selected_design_name}", 0, 1); pdf.cell(190, 10, f"Date: {date.today().strftime('%d-%m-%Y')}", 0, 1); pdf.multi_cell(190, 10, f"Remarks: {special_remarks}"); pdf.ln(5)
-
             pdf.set_font("Arial", "B", 12); pdf.cell(100, 10, "Product", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
             pdf.set_font("Arial", "", 10)
             for item in st.session_state.cart:
                 y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f"{item['name']} ({item['id']})", 1); rh = pdf.get_y() - y_pre
                 pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']*item['qty']}", 1, 1, "C")
-
             pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Grand Total", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{grand_total:,.2f}", 1, 1, "C")
             if dp_val > 0:
                 pdf.set_font("Arial", "", 10); pdf.cell(155, 10, f"Discount ({dp_val}%)", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{da:,.2f}", 1, 1, "C")
                 pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Final Amount", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{ft:,.2f}", 1, 1, "C")
-
-            # Static Disclaimer Section
             pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.cell(190, 10, "Disclaimer:", 0, 1)
             pdf.set_font("Arial", "", 10)
             disclaimer_txt = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
             for point in disclaimer_txt: pdf.multi_cell(190, 7, point)
-
             if uploaded_file:
                 ext = uploaded_file.name.split('.')[-1]
                 tp = f"temp_design.{ext}"
                 with open(tp, "wb") as f: f.write(uploaded_file.getbuffer())
                 pdf.ln(5); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(tp, x=10, w=100)
-
             pdf.ln(10); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
-
             b64 = base64.b64encode(pdf.output(dest='S').encode('latin-1')).decode('latin-1')
-
-            # Dynamic Filename generation
             today_str = date.today().strftime('%d-%m-%Y')
             clean_cust = customer_name.replace(' ', '_').strip() if customer_name else "Customer"
             clean_partner = partner_name.replace(' ', '_').strip() if partner_name else "Partner"
             filename = f"{clean_cust}_{clean_partner}_{today_str}.pdf"
-
             href = f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px;">Download PDF</button></a>'
             st.markdown(href, unsafe_allow_html=True)
     display_footer()
