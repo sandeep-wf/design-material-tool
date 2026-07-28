@@ -108,7 +108,7 @@ if st.session_state.page == "design_select":
 
 elif st.session_state.page == "material_listing":
     display_logo()
-    design_suffix = f" ({st.session_state.selected_design_name})" if st.session_state.selected_design_name else ""
+    design_suffix = f" - {st.session_state.selected_design_name}" if st.session_state.selected_design_name else ""
     st.markdown(f"### Materials{design_suffix}", unsafe_allow_html=True)
     if st.button("← Back", key="listing_back_top"): st.session_state.page = "design_select"; st.rerun()
 
