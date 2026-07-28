@@ -56,11 +56,25 @@ if "page" not in st.session_state: st.session_state.page = "design_select"
 if "selected_design" not in st.session_state: st.session_state.selected_design = None
 if "selected_design_name" not in st.session_state: st.session_state.selected_design_name = None
 
-# UI Header - Clickable Sticky Cart Button (Main Container)
-total_items = sum(item['qty'] for item in st.session_state.cart)
-if st.button(f"🛒 Cart ({total_items})", key="sticky_cart_btn"):
-    st.session_state.page = "cart"
-    st.rerun()
+# UI Header
+def display_header():
+    total_items = sum(item['qty'] for item in st.session_state.cart)
+    if st.session_state.page == "cart":
+        # Replace View Cart with Home and Back side-by-side
+        col1, col2 = st.columns([1, 1])
+        if col1.button("🏠 Home", key="top_home_btn"):
+            st.session_state.cart = []
+            st.session_state.page = "design_select"
+            st.rerun()
+        if col2.button("← Back", key="top_back_btn"):
+            st.session_state.page = "material_listing"
+            st.rerun()
+    else:
+        if st.button(f"🛒 Cart ({total_items})", key="sticky_cart_btn"):
+            st.session_state.page = "cart"
+            st.rerun()
+
+display_header()
 
 # Helper to display logo
 def display_logo():
@@ -91,7 +105,7 @@ if st.session_state.page == "design_select":
 elif st.session_state.page == "material_listing":
     display_logo(); st.title("Materials")
     if st.session_state.selected_design_name: st.subheader(st.session_state.selected_design_name)
-    if st.button("← Back"): st.session_state.page = "design_select"; st.rerun()
+    if st.button("← Back", key="listing_back"): st.session_state.page = "design_select"; st.rerun()
 
     target_design = st.session_state.selected_design
     m_code_col = "material_code" if "material_code" in df_mapping.columns else "material_crm_code"
@@ -195,11 +209,4 @@ elif st.session_state.page == "cart":
 
             href = f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px;">Download PDF</button></a>'
             st.markdown(href, unsafe_allow_html=True)
-
-        c_back, c_home = st.columns(2)
-        if c_back.button("Back", key="back_btn"): st.session_state.page = "material_listing"; st.rerun()
-        if c_home.button("Home", key="home_btn"):
-            st.session_state.cart = []
-            st.session_state.page = "design_select"
-            st.rerun()
     display_footer()
