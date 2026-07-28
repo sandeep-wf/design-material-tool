@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import os
@@ -128,10 +127,18 @@ elif st.session_state.page == "cart":
         st.info("Your cart is empty.")
         if st.button("Back"): st.session_state.page = "design_select"; st.rerun()
     else:
+        st.subheader("🛒 Items in Cart")
         grand_total = 0
         for i, item in enumerate(st.session_state.cart):
             item_total = item["price"] * item["qty"]; grand_total += item_total
-            st.write(f"{item['name']} x {item['qty']} = ₹{item_total}")
+            with st.container():
+                st.markdown(f"""
+                <div style='background-color: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 10px; border-left: 5px solid #1A237E;'>
+                    <b>{item['name']}</b><br>
+                    <small>SKU: {item['id']}</small><br>
+                    <span>₹{item['price']} x {item['qty']} = <b>₹{item_total:,.2f}</b></span>
+                </div>
+                """, unsafe_allow_html=True)
 
         st.divider()
         dp = st.number_input("Discount %", 0.0, 100.0, value=None, placeholder="0.0", step=0.1);
