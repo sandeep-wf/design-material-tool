@@ -129,29 +129,38 @@ elif st.session_state.page == "material_listing":
             with st.container():
                 st.markdown(f"<div class='card material-card'><b>{m_name}</b><br>Code: {formatted_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
 
-                # Multi-Trim Logic (T trim and U trim)
+                # Specialized Selection Logic
                 is_u_trim = "wall u trim" in m_name.lower()
                 is_t_trim = "wall t trim" in m_name.lower()
-                sel_color, sel_size = "", ""
+                is_bidding = "wall bidding" in m_name.lower()
+                sel_attr1, sel_attr2 = "", ""
 
                 if is_u_trim or is_t_trim:
                     col_attr1, col_attr2 = st.columns(2)
-                    sel_color = col_attr1.selectbox(f"Color", ["Gold", "Black", "Rose gold"], key=f"trim_color_{i}")
+                    sel_attr1 = col_attr1.selectbox(f"Color", ["Gold", "Black", "Rose gold"], key=f"trim_color_{i}")
                     if is_u_trim:
-                        sel_size = col_attr2.selectbox(f"Size", ["10mm", "12mm", "15mm", "20mm"], key=f"trim_size_{i}")
+                        sel_attr2 = col_attr2.selectbox(f"Size", ["10mm", "12mm", "15mm", "20mm"], key=f"trim_size_{i}")
                     else:
-                        sel_size = col_attr2.selectbox(f"Size", ["6mm", "12mm", "18mm"], key=f"trim_size_{i}")
+                        sel_attr2 = col_attr2.selectbox(f"Size", ["6mm", "12mm", "18mm"], key=f"trim_size_{i}")
+                
+                elif is_bidding:
+                    col_attr1, col_attr2 = st.columns(2)
+                    sel_attr1 = col_attr1.selectbox(f"Material", ["WPC", "PVC"], key=f"bid_mat_{i}")
+                    num_options = [f"{x:02d}" for x in range(1, 16)]
+                    sel_attr2 = col_attr2.selectbox(f"Number", num_options, key=f"bid_num_{i}")
 
                 c_qty, c_add = st.columns([1, 2])
                 qty = c_qty.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
                 if c_add.button("Add to Cart", key=f"add_{i}"):
                     if is_u_trim:
-                        item_name_final = f"Wall U Trim {sel_color} {sel_size}"
+                        item_name_final = f"Wall U Trim {sel_attr1} {sel_attr2}"
                     elif is_t_trim:
-                        item_name_final = f"Wall T Trim {sel_color} {sel_size}"
+                        item_name_final = f"Wall T Trim {sel_attr1} {sel_attr2}"
+                    elif is_bidding:
+                        item_name_final = f"Wall Bidding {sel_attr1} {sel_attr2}"
                     else:
                         item_name_final = m_name
-                        
+
                     found = False
                     for item in st.session_state.cart:
                         if item["id"] == m_id and item["name"] == item_name_final:
