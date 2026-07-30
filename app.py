@@ -128,11 +128,11 @@ elif st.session_state.page == "material_listing":
             formatted_id = format_sku(m_id)
             with st.container():
                 st.markdown(f"<div class='card material-card'><b>{m_name}</b><br>Code: {formatted_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
-                
+
                 # Special handling for T trim
                 is_t_trim = "t trim" in m_name.lower()
                 sel_color, sel_size = "", ""
-                
+
                 if is_t_trim:
                     col_c1, col_c2 = st.columns(2)
                     sel_color = col_c1.selectbox(f"Color", ["Gold", "Black", "Rose gold"], key=f"color_{i}")
@@ -143,7 +143,6 @@ elif st.session_state.page == "material_listing":
                 if c_add.button("Add to Cart", key=f"add_{i}"):
                     item_name_final = f"{m_name} ({sel_color}, {sel_size})" if is_t_trim else m_name
                     found = False
-                    # Unique check based on ID and name (to differentiate same ID with diff trim options)
                     for item in st.session_state.cart:
                         if item["id"] == m_id and item["name"] == item_name_final:
                             item["qty"] += qty; found = True; break
@@ -193,25 +192,43 @@ elif st.session_state.page == "cart":
             pdf.set_font("Arial", "B", 16); pdf.set_xy(30, 15); pdf.cell(0, 10, "Wakefit Quotation", 0, 1, "C"); pdf.ln(5)
             pdf.set_font("Arial", "", 12); pdf.cell(190, 10, f"Customer: {customer_name}", 0, 1); pdf.cell(190, 10, f"Partner: {partner_name}", 0, 1)
             pdf.cell(190, 10, f"Design: {st.session_state.selected_design_name}", 0, 1); pdf.cell(190, 10, f"Date: {date.today().strftime('%d-%m-%Y')}", 0, 1); pdf.multi_cell(190, 10, f"Remarks: {special_remarks}"); pdf.ln(5)
-            pdf.set_font("Arial", "B", 12); pdf.cell(100, 10, "Product", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
-            pdf.set_font("Arial", "", 10)
+            
+            def draw_header(p):
+                p.set_font("Arial", "B", 12)
+                p.cell(100, 10, "Product", 1); p.cell(20, 10, "Qty", 1, 0, "C"); p.cell(35, 10, "Price", 1, 0, "C"); p.cell(35, 10, "Total", 1, 1, "C")
+                p.set_font("Arial", "", 10)
+            
+            draw_header(pdf)
             for item in st.session_state.cart:
+                # Check for page break (if current y + row height > threshold)
+                if pdf.get_y() > 250:
+                    pdf.add_page()
+                    draw_header(pdf)
+                
                 y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f"{item['name']} ({item['id']})", 1); rh = pdf.get_y() - y_pre
                 pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']*item['qty']}", 1, 1, "C")
+            
+            if pdf.get_y() > 250: pdf.add_page()
             pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Grand Total", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{grand_total:,.2f}", 1, 1, "C")
             if dp_val > 0:
                 pdf.set_font("Arial", "", 10); pdf.cell(155, 10, f"Discount ({dp_val}%)", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{da:,.2f}", 1, 1, "C")
                 pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Final Amount", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{ft:,.2f}", 1, 1, "C")
+            
             pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.cell(190, 10, "Disclaimer:", 0, 1)
             pdf.set_font("Arial", "", 10)
             disclaimer_txt = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
-            for point in disclaimer_txt: pdf.multi_cell(190, 7, point)
+            for point in disclaimer_txt: 
+                if pdf.get_y() > 270: pdf.add_page()
+                pdf.multi_cell(190, 7, point)
+            
             if uploaded_file:
+                if pdf.get_y() > 180: pdf.add_page()
                 ext = uploaded_file.name.split('.')[-1]
                 tp = f"temp_design.{ext}"
                 with open(tp, "wb") as f: f.write(uploaded_file.getbuffer())
                 pdf.ln(5); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(tp, x=10, w=100)
-            pdf.ln(10); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
+            
+            pdf.set_y(-20); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
             b64 = base64.b64encode(pdf.output(dest='S').encode('latin-1')).decode('latin-1')
             today_str = date.today().strftime('%d-%m-%Y')
             clean_cust = customer_name.replace(' ', '_').strip() if customer_name else "Customer"
