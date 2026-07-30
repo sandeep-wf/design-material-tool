@@ -97,6 +97,7 @@ if st.session_state.page == "design_select":
     mask_pub = df_design["published"].astype(str).str.strip().str.upper() == "YES" if "published" in df_design.columns else True
     mask_act = df_design["active"].astype(str).str.strip().str.upper() == "YES" if "active" in df_design.columns else True
     active_designs = df_design[mask_pub & mask_act]
+
     design_names = active_designs["design_name"].unique().tolist() if "design_name" in active_designs.columns else []
     selected_name = st.selectbox("Choose a design", ["-- Select --"] + design_names)
     if selected_name != "-- Select --":
@@ -122,17 +123,32 @@ elif st.session_state.page == "material_listing":
         st.warning("No materials mapped.")
     else:
         for i, row in listing.iterrows():
+            m_name = str(row.get("material_name", "Unknown"))
             price = row.get("price", 0); m_id = row.get(m_crm_col)
             formatted_id = format_sku(m_id)
             with st.container():
-                st.markdown(f"<div class='card material-card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {formatted_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='card material-card'><b>{m_name}</b><br>Code: {formatted_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
+                
+                # Special handling for T trim
+                is_t_trim = "t trim" in m_name.lower()
+                sel_color, sel_size = "", ""
+                
+                if is_t_trim:
+                    col_c1, col_c2 = st.columns(2)
+                    sel_color = col_c1.selectbox(f"Color", ["Gold", "Black", "Rose gold"], key=f"color_{i}")
+                    sel_size = col_c2.selectbox(f"Size", ["6mm", "12mm", "18mm"], key=f"size_{i}")
+
                 c_qty, c_add = st.columns([1, 2])
                 qty = c_qty.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
                 if c_add.button("Add to Cart", key=f"add_{i}"):
+                    item_name_final = f"{m_name} ({sel_color}, {sel_size})" if is_t_trim else m_name
                     found = False
+                    # Unique check based on ID and name (to differentiate same ID with diff trim options)
                     for item in st.session_state.cart:
-                        if item["id"] == m_id: item["qty"] += qty; found = True; break
-                    if not found: st.session_state.cart.append({"name": row.get("material_name"), "qty": qty, "id": m_id, "price": float(price)})
+                        if item["id"] == m_id and item["name"] == item_name_final:
+                            item["qty"] += qty; found = True; break
+                    if not found:
+                        st.session_state.cart.append({"name": item_name_final, "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
         st.divider()
         if st.button("View Cart 🛒", key="view_cart_bottom"): st.session_state.page = "cart"; st.rerun()
