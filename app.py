@@ -55,6 +55,8 @@ if "cart" not in st.session_state: st.session_state.cart = []
 if "page" not in st.session_state: st.session_state.page = "design_select"
 if "selected_design" not in st.session_state: st.session_state.selected_design = None
 if "selected_design_name" not in st.session_state: st.session_state.selected_design_name = None
+if "selection_mode" not in st.session_state: st.session_state.selection_mode = "Select a Design"
+if "selected_material_id" not in st.session_state: st.session_state.selected_material_id = None
 
 # Helper to format SKU
 def format_sku(sku):
@@ -93,34 +95,53 @@ def display_footer():
     st.markdown("<br><hr><p style='text-align: center;'>© 2026 Wakefit. All Rights Reserved</p>", unsafe_allow_html=True)
 
 if st.session_state.page == "design_select":
-    display_logo(); st.title("Select Design")
-    mask_pub = df_design["published"].astype(str).str.strip().str.upper() == "YES" if "published" in df_design.columns else True
-    mask_act = df_design["active"].astype(str).str.strip().str.upper() == "YES" if "active" in df_design.columns else True
-    active_designs = df_design[mask_pub & mask_act]
+    display_logo(); st.title("Wakefit Selector")
+    st.session_state.selection_mode = st.radio("Choose Mode", ["Select a Design", "Select Material"], index=0)
 
-    design_names = active_designs["design_name"].unique().tolist() if "design_name" in active_designs.columns else []
-    selected_name = st.selectbox("Choose a design", ["-- Select --"] + design_names)
-    if selected_name != "-- Select --":
-        design_row = active_designs[active_designs["design_name" ] == selected_name]
-        st.session_state.selected_design = str(design_row["design_code"].values[0])
-        st.session_state.selected_design_name = selected_name
-        if st.button("Next"): st.session_state.page = "material_listing"; st.rerun()
+    if st.session_state.selection_mode == "Select a Design":
+        mask_pub = df_design["published"].astype(str).str.strip().str.upper() == "YES" if "published" in df_design.columns else True
+        mask_act = df_design["active"].astype(str).str.strip().str.upper() == "YES" if "active" in df_design.columns else True
+        active_designs = df_design[mask_pub & mask_act]
+        design_names = active_designs["design_name"].unique().tolist() if "design_name" in active_designs.columns else []
+        selected_name = st.selectbox("Choose a design", ["-- Select --"] + design_names)
+        if selected_name != "-- Select --":
+            design_row = active_designs[active_designs["design_name" ] == selected_name]
+            st.session_state.selected_design = str(design_row["design_code"].values[0])
+            st.session_state.selected_design_name = selected_name
+            st.session_state.selected_material_id = None
+            if st.button("Next"): st.session_state.page = "material_listing"; st.rerun()
+    
+    else:
+        m_crm_col = "material_crm_code" if "material_crm_code" in df_material.columns else df_material.columns[0]
+        mat_display = df_material.apply(lambda x: f"{x.get('material_name', 'Unknown')} ({x.get(m_crm_col)})", axis=1).tolist()
+        selected_mat_str = st.selectbox("Search and select a material", ["-- Select --"] + mat_display)
+        if selected_mat_str != "-- Select --":
+            idx = mat_display.index(selected_mat_str)
+            st.session_state.selected_material_id = str(df_material.iloc[idx][m_crm_col])
+            st.session_state.selected_design = None
+            st.session_state.selected_design_name = "Single Material Selection"
+            if st.button("Next"): st.session_state.page = "material_listing"; st.rerun()
+    
     display_footer()
 
 elif st.session_state.page == "material_listing":
     display_logo()
-    design_suffix = f" - {st.session_state.selected_design_name}" if st.session_state.selected_design_name else ""
+    design_suffix = f" ({st.session_state.selected_design_name})" if st.session_state.selected_design_name else ""
     st.markdown(f"### Materials{design_suffix}", unsafe_allow_html=True)
     if st.button("← Back", key="listing_back_top"): st.session_state.page = "design_select"; st.rerun()
 
-    target_design = st.session_state.selected_design
-    m_code_col = "material_code" if "material_code" in df_mapping.columns else "material_crm_code"
-    mapped_codes = df_mapping[df_mapping["design_code"] == target_design][m_code_col].unique().tolist()
     m_crm_col = "material_crm_code" if "material_crm_code" in df_material.columns else df_material.columns[0]
-    listing = df_material[df_material[m_crm_col].isin(mapped_codes)]
+    
+    if st.session_state.selected_material_id:
+        listing = df_material[df_material[m_crm_col].astype(str) == st.session_state.selected_material_id]
+    else:
+        target_design = st.session_state.selected_design
+        m_code_col = "material_code" if "material_code" in df_mapping.columns else "material_crm_code"
+        mapped_codes = df_mapping[df_mapping["design_code"] == target_design][m_code_col].unique().tolist()
+        listing = df_material[df_material[m_crm_col].isin(mapped_codes)]
 
     if listing.empty:
-        st.warning("No materials mapped.")
+        st.warning("No materials found.")
     else:
         for i, row in listing.iterrows():
             m_name = str(row.get("material_name", "Unknown"))
@@ -129,7 +150,6 @@ elif st.session_state.page == "material_listing":
             with st.container():
                 st.markdown(f"<div class='card material-card'><b>{m_name}</b><br>Code: {formatted_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
 
-                # Specialized Selection Logic
                 is_u_trim = "wall u trim" in m_name.lower()
                 is_t_trim = "wall t trim" in m_name.lower()
                 is_bidding = "wall bidding" in m_name.lower()
@@ -142,7 +162,6 @@ elif st.session_state.page == "material_listing":
                         sel_attr2 = col_attr2.selectbox(f"Size", ["10mm", "12mm", "15mm", "20mm"], key=f"trim_size_{i}")
                     else:
                         sel_attr2 = col_attr2.selectbox(f"Size", ["6mm", "12mm", "18mm"], key=f"trim_size_{i}")
-                
                 elif is_bidding:
                     col_attr1, col_attr2 = st.columns(2)
                     sel_attr1 = col_attr1.selectbox(f"Material", ["WPC", "PVC"], key=f"bid_mat_{i}")
@@ -152,12 +171,8 @@ elif st.session_state.page == "material_listing":
                 c_qty, c_add = st.columns([1, 2])
                 qty = c_qty.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
                 if c_add.button("Add to Cart", key=f"add_{i}"):
-                    if is_u_trim:
-                        item_name_final = f"Wall U Trim {sel_attr1} {sel_attr2}"
-                    elif is_t_trim:
-                        item_name_final = f"Wall T Trim {sel_attr1} {sel_attr2}"
-                    elif is_bidding:
-                        item_name_final = f"Wall Bidding {sel_attr1} {sel_attr2}"
+                    if is_u_trim or is_t_trim or is_bidding:
+                        item_name_final = f"{m_name.title()} {sel_attr1} {sel_attr2}"
                     else:
                         item_name_final = m_name
 
@@ -211,27 +226,24 @@ elif st.session_state.page == "cart":
             pdf.set_font("Arial", "B", 16); pdf.set_xy(30, 15); pdf.cell(0, 10, "Wakefit Quotation", 0, 1, "C"); pdf.ln(5)
             pdf.set_font("Arial", "", 12); pdf.cell(190, 10, f"Customer: {customer_name}", 0, 1); pdf.cell(190, 10, f"Partner: {partner_name}", 0, 1)
             pdf.cell(190, 10, f"Design: {st.session_state.selected_design_name}", 0, 1); pdf.cell(190, 10, f"Date: {date.today().strftime('%d-%m-%Y')}", 0, 1); pdf.multi_cell(190, 10, f"Remarks: {special_remarks}"); pdf.ln(5)
-
+            
             def draw_header(p):
                 p.set_font("Arial", "B", 12)
                 p.cell(100, 10, "Product", 1); p.cell(20, 10, "Qty", 1, 0, "C"); p.cell(35, 10, "Price", 1, 0, "C"); p.cell(35, 10, "Total", 1, 1, "C")
                 p.set_font("Arial", "", 10)
-
+            
             draw_header(pdf)
             for item in st.session_state.cart:
-                if pdf.get_y() > 250:
-                    pdf.add_page()
-                    draw_header(pdf)
-
+                if pdf.get_y() > 250: pdf.add_page(); draw_header(pdf)
                 y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f"{item['name']} ({item['id']})", 1); rh = pdf.get_y() - y_pre
                 pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']*item['qty']}", 1, 1, "C")
 
             if pdf.get_y() > 250: pdf.add_page()
             pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Grand Total", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{grand_total:,.2f}", 1, 1, "C")
             if dp_val > 0:
-                pdf.set_font("Arial", "", 10); pdf.cell(155, 10, f"Discount ({dp_val}%)", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{da:,.2f}", 1, 1, "C")
+                pdf.set_font("Arial", "", 10); pdf.cell(155, 10, f"Discount ({dp_val}%) ", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{da:,.2f}", 1, 1, "C")
                 pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Final Amount", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{ft:,.2f}", 1, 1, "C")
-
+            
             pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.cell(190, 10, "Disclaimer:", 0, 1)
             pdf.set_font("Arial", "", 10)
             disclaimer_txt = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
