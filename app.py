@@ -105,7 +105,7 @@ if st.session_state.page == "design_select":
         design_names = active_designs["design_name"].unique().tolist() if "design_name" in active_designs.columns else []
         selected_name = st.selectbox("Choose a design", ["-- Select --"] + design_names)
         if selected_name != "-- Select --":
-            design_row = active_designs[active_designs["design_name" ] == selected_name]
+            design_row = active_designs[active_designs["design_name"] == selected_name]
             st.session_state.selected_design = str(design_row["design_code"].values[0])
             st.session_state.selected_design_name = selected_name
             st.session_state.selected_material_id = None
@@ -113,20 +113,11 @@ if st.session_state.page == "design_select":
 
     else:
         m_crm_col = "material_crm_code" if "material_crm_code" in df_material.columns else df_material.columns[0]
-        search_query = st.text_input("Search Material (e.g. S168)", "")
-        
-        # Strict Search Logic
-        if search_query.strip():
-            filtered_df = df_material[df_material.apply(lambda x: search_query.lower() in str(x.get('material_name', '')).lower() or search_query.lower() in str(x.get(m_crm_col, '')).lower(), axis=1)]
-        else:
-            filtered_df = df_material
-            
-        mat_display = filtered_df.apply(lambda x: f"{x.get('material_name', 'Unknown')} ({x.get(m_crm_col)})", axis=1).tolist()
-        selected_mat_str = st.selectbox("Select a material from results", ["-- Select --"] + mat_display)
-        
+        mat_display = df_material.apply(lambda x: f"{x.get('material_name', 'Unknown')} ({x.get(m_crm_col)})", axis=1).tolist()
+        selected_mat_str = st.selectbox("Search and select a material", ["-- Select --"] + mat_display)
         if selected_mat_str != "-- Select --":
-            selected_id = selected_mat_str.split('(')[-1].strip(')')
-            st.session_state.selected_material_id = selected_id
+            idx = mat_display.index(selected_mat_str)
+            st.session_state.selected_material_id = str(df_material.iloc[idx][m_crm_col])
             st.session_state.selected_design = None
             st.session_state.selected_design_name = "Single Material Selection"
             if st.button("Next"): st.session_state.page = "material_listing"; st.rerun()
@@ -153,44 +144,17 @@ elif st.session_state.page == "material_listing":
         st.warning("No materials found.")
     else:
         for i, row in listing.iterrows():
-            m_name = str(row.get("material_name", "Unknown"))
             price = row.get("price", 0); m_id = row.get(m_crm_col)
             formatted_id = format_sku(m_id)
             with st.container():
-                st.markdown(f"<div class='card material-card'><b>{m_name}</b><br>Code: {formatted_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
-
-                is_u_trim = "wall u trim" in m_name.lower()
-                is_t_trim = "wall t trim" in m_name.lower()
-                is_bidding = "wall bidding" in m_name.lower()
-                sel_attr1, sel_attr2 = "", ""
-
-                if is_u_trim or is_t_trim:
-                    col_attr1, col_attr2 = st.columns(2)
-                    sel_attr1 = col_attr1.selectbox(f"Color", ["Gold", "Black", "Rose gold"], key=f"trim_color_{i}")
-                    if is_u_trim:
-                        sel_attr2 = col_attr2.selectbox(f"Size", ["10mm", "12mm", "15mm", "20mm"], key=f"trim_size_{i}")
-                    else:
-                        sel_attr2 = col_attr2.selectbox(f"Size", ["6mm", "12mm", "18mm"], key=f"trim_size_{i}")
-                elif is_bidding:
-                    col_attr1, col_attr2 = st.columns(2)
-                    sel_attr1 = col_attr1.selectbox(f"Material", ["WPC", "PVC"], key=f"bid_mat_{i}")
-                    num_options = [f"{x:02d}" for x in range(1, 16)]
-                    sel_attr2 = col_attr2.selectbox(f"Number", num_options, key=f"bid_num_{i}")
-
+                st.markdown(f"<div class='card material-card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {formatted_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
                 c_qty, c_add = st.columns([1, 2])
                 qty = c_qty.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
                 if c_add.button("Add to Cart", key=f"add_{i}"):
-                    if is_u_trim or is_t_trim or is_bidding:
-                        item_name_final = f"{m_name.title()} {sel_attr1} {sel_attr2}"
-                    else:
-                        item_name_final = m_name
-
                     found = False
                     for item in st.session_state.cart:
-                        if item["id"] == m_id and item["name"] == item_name_final:
-                            item["qty"] += qty; found = True; break
-                    if not found:
-                        st.session_state.cart.append({"name": item_name_final, "qty": qty, "id": m_id, "price": float(price)})
+                        if item["id"] == m_id: item["qty"] += qty; found = True; break
+                    if not found: st.session_state.cart.append({"name": row.get("material_name"), "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
         st.divider()
         if st.button("View Cart 🛒", key="view_cart_bottom"): st.session_state.page = "cart"; st.rerun()
@@ -209,65 +173,72 @@ elif st.session_state.page == "cart":
     else:
         st.subheader("🛒 Items in Cart")
         grand_total = 0
+        indices_to_remove = []
         for i, item in enumerate(st.session_state.cart):
             item_total = item["price"] * item["qty"]; grand_total += item_total
             formatted_id = format_sku(item['id'])
             with st.container():
-                st.markdown(f"""
+                col_txt, col_edit = st.columns([3, 1])
+                col_txt.markdown(f"""
                 <div style='background-color: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 10px; border-left: 5px solid #1A237E;'>
                     <b>{item['name']}</b><br>
                     <small>SKU: {formatted_id}</small><br>
                     <span>₹{item['price']} x {item['qty']} = <b>₹{item_total:,.2f}</b></span>
                 </div>
                 """, unsafe_allow_html=True)
+                new_qty = col_edit.number_input("Qty", min_value=0, value=item["qty"], key=f"edit_{i}")
+                if new_qty != item["qty"]:
+                    if new_qty == 0:
+                        indices_to_remove.append(i)
+                    else:
+                        st.session_state.cart[i]["qty"] = new_qty
+                    st.rerun()
+        
+        for index in reversed(indices_to_remove):
+            st.session_state.cart.pop(index)
+            st.rerun()
+
         st.divider()
         dp = st.number_input("Discount %", 0.0, 100.0, value=None, placeholder="0.0", step=0.1);
         dp_val = dp if dp is not None else 0.0
-        da = (grand_total * dp_val) / 100; ft = grand_total - da
-        st.markdown(f"### Total: ₹{ft:,.2f}")
+        da = (grand_total * dp_val) / 100; ft = (grand_total - da)
+        st.markdown(f"### Total (excl. delivery): ₹{ft:,.2f}")
         uploaded_file = st.file_uploader("Hand Made Design Image", type=["png", "jpg", "jpeg"])
         if uploaded_file:
             st.image(uploaded_file, caption="Uploaded Design Preview", use_container_width=True)
         col_clr, col_prnt = st.columns(2)
         if col_clr.button("🗑️ Clear Cart", type="primary", use_container_width=True): st.session_state.cart = []; st.rerun()
         if col_prnt.button("🖨️ Print PDF", use_container_width=True):
+            delivery_charge = 1000
+            final_amount_with_delivery = ft + delivery_charge
+            
             pdf = FPDF(); pdf.add_page(); pdf.image('wakefit logo.png', x=175, y=10, w=25)
             pdf.set_font("Arial", "B", 16); pdf.set_xy(30, 15); pdf.cell(0, 10, "Wakefit Quotation", 0, 1, "C"); pdf.ln(5)
             pdf.set_font("Arial", "", 12); pdf.cell(190, 10, f"Customer: {customer_name}", 0, 1); pdf.cell(190, 10, f"Partner: {partner_name}", 0, 1)
             pdf.cell(190, 10, f"Design: {st.session_state.selected_design_name}", 0, 1); pdf.cell(190, 10, f"Date: {date.today().strftime('%d-%m-%Y')}", 0, 1); pdf.multi_cell(190, 10, f"Remarks: {special_remarks}"); pdf.ln(5)
-
-            def draw_header(p):
-                p.set_font("Arial", "B", 12)
-                p.cell(100, 10, "Product", 1); p.cell(20, 10, "Qty", 1, 0, "C"); p.cell(35, 10, "Price", 1, 0, "C"); p.cell(35, 10, "Total", 1, 1, "C")
-                p.set_font("Arial", "", 10)
-
-            draw_header(pdf)
+            pdf.set_font("Arial", "B", 12); pdf.cell(100, 10, "Product", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
+            pdf.set_font("Arial", "", 10)
             for item in st.session_state.cart:
-                if pdf.get_y() > 250: pdf.add_page(); draw_header(pdf)
                 y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f"{item['name']} ({item['id']})", 1); rh = pdf.get_y() - y_pre
                 pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']*item['qty']}", 1, 1, "C")
-
-            if pdf.get_y() > 250: pdf.add_page()
-            pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Grand Total", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{grand_total:,.2f}", 1, 1, "C")
+            
+            pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Items Subtotal", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{grand_total:,.2f}", 1, 1, "C")
             if dp_val > 0:
                 pdf.set_font("Arial", "", 10); pdf.cell(155, 10, f"Discount ({dp_val}%) ", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{da:,.2f}", 1, 1, "C")
-                pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Final Amount", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{ft:,.2f}", 1, 1, "C")
-
+            
+            pdf.set_font("Arial", "", 10); pdf.cell(155, 10, "Delivery Charges", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{delivery_charge:,.2f}", 1, 1, "C")
+            pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Final Amount", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{final_amount_with_delivery:,.2f}", 1, 1, "C")
+            
             pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.cell(190, 10, "Disclaimer:", 0, 1)
             pdf.set_font("Arial", "", 10)
             disclaimer_txt = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
-            for point in disclaimer_txt:
-                if pdf.get_y() > 270: pdf.add_page()
-                pdf.multi_cell(190, 7, point)
-
+            for point in disclaimer_txt: pdf.multi_cell(190, 7, point)
             if uploaded_file:
-                if pdf.get_y() > 180: pdf.add_page()
                 ext = uploaded_file.name.split('.')[-1]
                 tp = f"temp_design.{ext}"
                 with open(tp, "wb") as f: f.write(uploaded_file.getbuffer())
                 pdf.ln(5); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(tp, x=10, w=100)
-
-            pdf.set_y(-20); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
+            pdf.ln(10); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
             b64 = base64.b64encode(pdf.output(dest='S').encode('latin-1')).decode('latin-1')
             today_str = date.today().strftime('%d-%m-%Y')
             clean_cust = customer_name.replace(' ', '_').strip() if customer_name else "Customer"
