@@ -147,17 +147,45 @@ elif st.session_state.page == "material_listing":
         st.warning("No materials found.")
     else:
         for i, row in listing.iterrows():
+            m_name = str(row.get("material_name", "Unknown"))
             price = row.get("price", 0); m_id = row.get(m_crm_col)
             formatted_id = format_sku(m_id)
             with st.container():
-                st.markdown(f"<div class='card material-card'><b>{row.get('material_name', 'Unknown')}</b><br>Code: {formatted_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='card material-card'><b>{m_name}</b><br>Code: {formatted_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
+                
+                # Restored Special Handling for Trims and Bidding
+                is_u_trim = "wall u trim" in m_name.lower()
+                is_t_trim = "wall t trim" in m_name.lower()
+                is_bidding = "wall bidding" in m_name.lower()
+                sel_attr1, sel_attr2 = "", ""
+
+                if is_u_trim or is_t_trim:
+                    col_attr1, col_attr2 = st.columns(2)
+                    sel_attr1 = col_attr1.selectbox(f"Color", ["Gold", "Black", "Rose gold"], key=f"trim_color_{i}")
+                    if is_u_trim:
+                        sel_attr2 = col_attr2.selectbox(f"Size", ["10mm", "12mm", "15mm", "20mm"], key=f"trim_size_{i}")
+                    else:
+                        sel_attr2 = col_attr2.selectbox(f"Size", ["6mm", "12mm", "18mm"], key=f"trim_size_{i}")
+                elif is_bidding:
+                    col_attr1, col_attr2 = st.columns(2)
+                    sel_attr1 = col_attr1.selectbox(f"Material", ["WPC", "PVC"], key=f"bid_mat_{i}")
+                    num_options = [f"{x:02d}" for x in range(1, 16)]
+                    sel_attr2 = col_attr2.selectbox(f"Number", num_options, key=f"bid_num_{i}")
+
                 c_qty, c_add = st.columns([1, 2])
                 qty = c_qty.number_input("Qty", min_value=1, value=1, key=f"qty_{i}")
                 if c_add.button("Add to Cart", key=f"add_{i}"):
+                    if is_u_trim or is_t_trim or is_bidding:
+                        item_name_final = f"{m_name.title()} {sel_attr1} {sel_attr2}"
+                    else:
+                        item_name_final = m_name
+                        
                     found = False
                     for item in st.session_state.cart:
-                        if item["id"] == m_id: item["qty"] += qty; found = True; break
-                    if not found: st.session_state.cart.append({"name": row.get("material_name"), "qty": qty, "id": m_id, "price": float(price)})
+                        if item["id"] == m_id and item["name"] == item_name_final:
+                            item["qty"] += qty; found = True; break
+                    if not found:
+                        st.session_state.cart.append({"name": item_name_final, "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
         st.divider()
         if st.button("View Cart 🛒", key="view_cart_bottom"): st.session_state.page = "cart"; st.rerun()
@@ -176,7 +204,6 @@ elif st.session_state.page == "cart":
     else:
         st.subheader("🛒 Items in Cart")
         grand_total = 0
-        indices_to_remove = []
         for i, item in enumerate(st.session_state.cart):
             item_total = item["price"] * item["qty"]; grand_total += item_total
             formatted_id = format_sku(item['id'])
