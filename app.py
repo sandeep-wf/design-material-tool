@@ -7,12 +7,13 @@ from fpdf import FPDF
 import base64
 import requests
 
+# Page Config
 st.set_page_config(page_title="Wakefit PWA", layout="centered")
 
 def local_css(file_name):
     if os.path.exists(file_name):
         with open(file_name) as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 local_css("style.css")
 
@@ -29,14 +30,12 @@ def load_data():
     designs = pd.read_excel(path, sheet_name=0)
     materials = pd.read_excel(path, sheet_name=1)
     mapping = pd.read_excel(path, sheet_name=2)
-
     def clean_df(df):
         df.columns = [str(c).strip().lower().replace(' ', '_') for c in df.columns]
         return df
-
     designs = clean_df(designs); materials = clean_df(materials); mapping = clean_df(mapping)
     for df in [designs, mapping, materials]:
-        for col in df.columns:
+        for col in df.columns: 
             if 'code' in col: df[col] = df[col].astype(str).str.strip()
     return designs, materials, mapping
 
@@ -83,81 +82,89 @@ if st.session_state.page == "design_select":
         if selected_mat_str != "-- Select --":
             st.session_state.selected_material_id = selected_mat_str.split('(')[-1].strip(')')
             st.session_state.selected_design = None
-            st.session_state.selected_design_name = "Search Selection"
+            st.session_state.selected_design_name = "Single Material Selection"
             if st.button("Next"): st.session_state.page = "material_listing"; st.rerun()
 
 elif st.session_state.page == "material_listing":
     st.title("Materials")
     if st.button("← Back"): st.session_state.page = "design_select"; st.rerun()
-
-    m_crm_col = "material_crm_code" if "material_crm_code" in df_material.columns else df_material.columns[0]
+    m_crm_col = "material_crm_code"
     if st.session_state.selected_material_id:
         listing = df_material[df_material[m_crm_col].astype(str) == st.session_state.selected_material_id]
     else:
-        target_design = st.session_state.selected_design
-        m_code_col = "material_code" if "material_code" in df_mapping.columns else "material_crm_code"
-        mapped_codes = df_mapping[df_mapping["design_code"] == target_design][m_code_col].unique().tolist()
-        listing = df_material[df_material[m_crm_col].astype(str).isin([str(x) for x in mapped_codes])]
+        target = st.session_state.selected_design
+        m_codes = df_mapping[df_mapping["design_code"] == target]["material_crm_code"].unique().tolist()
+        listing = df_material[df_material[m_crm_col].astype(str).isin([str(x) for x in m_codes])]
 
     for i, row in listing.iterrows():
         m_name = str(row.get("material_name", "Unknown"))
-        price = row.get("price", 0)
-        m_id = row.get(m_crm_col)
+        price = row.get("price", 0); m_id = row.get(m_crm_col)
         with st.container():
             st.markdown(f"<div class='card material-card'><b>{m_name}</b><br>Code: {format_sku(m_id)}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
-
-            is_u_trim = "wall u trim" in m_name.lower()
-            is_t_trim = "wall t trim" in m_name.lower()
-            is_bidding = "wall bidding" in m_name.lower()
+            is_trim = any(x in m_name.lower() for x in ["wall u trim", "wall t trim", "wall bidding"])
             sel_attr1, sel_attr2 = "", ""
-
-            if is_u_trim or is_t_trim:
+            if "wall u trim" in m_name.lower() or "wall t trim" in m_name.lower():
                 c_attr1, c_attr2 = st.columns(2)
                 sel_attr1 = c_attr1.selectbox("Color", ["Gold", "Black", "Rose gold"], key=f"col_{i}")
-                sizes = ["10mm", "12mm", "15mm", "20mm"] if is_u_trim else ["6mm", "12mm", "18mm"]
+                sizes = ["10mm", "12mm", "15mm", "20mm"] if "u trim" in m_name.lower() else ["6mm", "12mm", "18mm"]
                 sel_attr2 = c_attr2.selectbox("Size", sizes, key=f"sz_{i}")
-            elif is_bidding:
+            elif "wall bidding" in m_name.lower():
                 c_attr1, c_attr2 = st.columns(2)
                 sel_attr1 = c_attr1.selectbox("Material", ["WPC", "PVC"], key=f"mat_{i}")
                 sel_attr2 = c_attr2.selectbox("Number", [f"{x:02d}" for x in range(1, 16)], key=f"num_{i}")
 
             qty = st.number_input("Qty", 1, 100, 1, key=f"q_{i}")
             if st.button("Add to Cart", key=f"a_{i}"):
-                final_name = f"{m_name} {sel_attr1} {sel_attr2}" if (is_u_trim or is_t_trim or is_bidding) else m_name
+                final_name = f"{m_name} {sel_attr1} {sel_attr2}" if is_trim else m_name
                 st.session_state.cart.append({"name": final_name, "qty": qty, "id": m_id, "price": float(price)})
                 st.toast("Added!")
 
 elif st.session_state.page == "cart":
     st.title("Your Cart")
     customer_name = st.text_input("Customer Name", key="cn")
-    customer_mobile = st.text_input("Customer Mobile (with 91)", key="cm")
+    partner_name = st.selectbox("Select Partner", ["Rajesh", "Nirmal"], key="pn")
+    customer_mobile = st.text_input("Customer Mobile (e.g. 919876543210)", key="cm")
+    remarks = st.text_area("Special Remarks", key="rmk")
 
     if not st.session_state.cart:
         st.info("Cart is empty.")
         if st.button("Back"): st.session_state.page = "design_select"; st.rerun()
     else:
-        grand_total = sum(item["price"] * item["qty"] for item in st.session_state.cart)
-        for item in st.session_state.cart:
-            st.markdown(f"**{item['name']}** - ₹{item['price']} x {item['qty']} = ₹{item['price']*item['qty']:,.2f}")
-        st.divider()
-        delivery_charge = 1000
-        final_total = grand_total + delivery_charge
-        st.markdown(f"### Total (Incl. delivery): ₹{final_total:,.2f}")
+        grand_total = 0
+        for i, item in enumerate(st.session_state.cart):
+            item_total = item['price'] * item['qty']; grand_total += item_total
+            with st.container():
+                col_txt, col_edit = st.columns([3, 1])
+                col_txt.markdown(f"<div class='card'><b>{item['name']}</b><br>SKU: {item['id']}<br>₹{item['price']} x {item['qty']} = <b>₹{item_total:,.2f}</b></div>", unsafe_allow_html=True)
+                new_qty = col_edit.number_input("Qty", 0, 100, item['qty'], key=f"edit_{i}")
+                if new_qty != item['qty']:
+                    if new_qty == 0: st.session_state.cart.pop(i)
+                    else: st.session_state.cart[i]['qty'] = new_qty
+                    st.rerun()
+        
+        delivery = 1000
+        st.markdown(f"### Total (incl. delivery): ₹{grand_total + delivery:,.2f}")
+        
+        if st.button("Print PDF", use_container_width=True):
+            pdf = FPDF(); pdf.add_page(); pdf.set_font("Arial", "B", 16)
+            pdf.cell(190, 10, "Wakefit Quotation", 0, 1, "C"); pdf.ln(5)
+            pdf.set_font("Arial", "", 12); pdf.cell(190, 10, f"Customer: {customer_name}", 0, 1); pdf.cell(190, 10, f"Partner: {partner_name}", 0, 1); pdf.ln(5)
+            pdf.set_font("Arial", "B", 12); pdf.cell(100, 10, "Product", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
+            pdf.set_font("Arial", "", 10)
+            for item in st.session_state.cart:
+                y = pdf.get_y(); pdf.multi_cell(100, 10, f"{item['name']} ({item['id']})", 1); h = pdf.get_y() - y
+                pdf.set_xy(110, y); pdf.cell(20, h, str(item['qty']), 1, 0, "C"); pdf.cell(35, h, str(item['price']), 1, 0, "C"); pdf.cell(35, h, str(item['price']*item['qty']), 1, 1, "C")
+            pdf.cell(155, 10, "Delivery", 1, 0, "R"); pdf.cell(35, 10, str(delivery), 1, 1, "C")
+            pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Final Total", 1, 0, "R"); pdf.cell(35, 10, str(grand_total+delivery), 1, 1, "C")
+            b64 = base64.b64encode(pdf.output(dest='S').encode('latin-1')).decode('latin-1')
+            st.markdown(f'<a href="data:application/octet-stream;base64,{b64}" download="Quotation.pdf"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px;">Download PDF</button></a>', unsafe_allow_html=True)
 
         if st.button("Share on WhatsApp", use_container_width=True):
-            if not customer_mobile:
-                st.warning("Enter mobile number.")
-            else:
+            if customer_mobile:
                 url = "https://mediaapi.smsgupshup.com/GatewayAPI/rest"
-                payload = {
-                    "method": "SENDMEDIAMESSAGE", "send_to": str(customer_mobile), "msg_type": "DOCUMENT", "isHSM": "true",
-                    "v": "1.1", "format": "json", "auth_scheme": "plain", "userid": "2000264220", "password": "IakKOS7Ot",
-                    "media_url": "https://drive.google.com/uc?export=download&id=1oWHdKZtKkvFfC47z4Tj5PlOksRsvhyB6",
-                    "filename": "Wakefit Quotation.pdf", "whatsAppTemplateId": "2216484149134300",
-                    "var1": str(customer_name), "var2": str(round(final_total, 2))
-                }
+                payload = {"method": "SENDMEDIAMESSAGE", "send_to": str(customer_mobile), "msg_type": "DOCUMENT", "isHSM": "true", "v": "1.1", "format": "json", "auth_scheme": "plain", "userid": "2000264220", "password": "IakKOS7Ot", "media_url": "https://drive.google.com/uc?export=download&id=1oWHdKZtKkvFfC47z4Tj5PlOksRsvhyB6", "filename": "Quotation.pdf", "whatsAppTemplateId": "2216484149134300", "var1": str(customer_name), "var2": str(grand_total+delivery)}
                 res = requests.post(url, data=payload)
                 if res.status_code == 200: st.success("Shared!")
-                else: st.error("Failed.")
+            else: st.warning("Enter mobile number.")
 
-        if st.button("Home"): st.session_state.cart = []; st.session_state.page = "design_select"; st.rerun()
+        if st.button("Home / Clear"): st.session_state.cart = []; st.session_state.page = "design_select"; st.rerun()
