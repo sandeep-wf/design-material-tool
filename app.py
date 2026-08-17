@@ -207,7 +207,7 @@ elif st.session_state.page == "cart":
         st.subheader("🛒 Items in Cart")
         grand_total = 0
         for i, item in enumerate(st.session_state.cart):
-            item_total = item["price"] * item["qty"]; grand_total += item_total
+            item_total = item["price" ] * item["qty"]; grand_total += item_total
             formatted_id = format_sku(item['id'])
             with st.container():
                 col_txt, col_edit = st.columns([3, 1])
@@ -236,7 +236,7 @@ elif st.session_state.page == "cart":
             st.image(uploaded_file, caption="Uploaded Design Preview", use_container_width=True)
         col_clr, col_prnt = st.columns(2)
         if col_clr.button("🗑️ Clear Cart", type="primary", use_container_width=True): st.session_state.cart = []; st.rerun()
-        
+
         if col_prnt.button("🖨️ Print PDF", use_container_width=True):
             delivery_charge = 1000
             final_amount_with_delivery = ft + delivery_charge
@@ -268,26 +268,27 @@ elif st.session_state.page == "cart":
                 with open(tp, "wb") as f: f.write(uploaded_file.getbuffer())
                 pdf.ln(5); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(tp, x=10, w=100)
             pdf.ln(10); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
-            
+
             # Save locally for WhatsApp API and generate download link
             local_pdf_path = "quotation.pdf"
             pdf.output(local_pdf_path)
-            
+
             b64 = base64.b64encode(open(local_pdf_path, "rb").read()).decode('latin-1')
             today_str = date.today().strftime('%d-%m-%Y')
             clean_cust = customer_name.replace(' ', '_').strip() if customer_name else "Customer"
             clean_partner = partner_name.replace(' ', '_').strip() if partner_name else "Partner"
             filename = f"{clean_cust}_{clean_partner}_{today_str}.pdf"
-            
+
             st.session_state.pdf_ready = True
             st.session_state.pdf_b64 = b64
             st.session_state.pdf_filename = filename
+            st.session_state.pdf_customer_name = customer_name
             st.session_state.final_amount_val = f"{final_amount_with_delivery:,.2f}"
 
         if st.session_state.get("pdf_ready"):
             href = f'<a href="data:application/octet-stream;base64,{st.session_state.pdf_b64}" download="{st.session_state.pdf_filename}"><button style="width:100%; padding:10px; background-color:#1A237E; color:white; border:none; border-radius:8px; margin-bottom:10px;">Download Quotation</button></a>'
             st.markdown(href, unsafe_allow_html=True)
-            
+
             if st.button("Share on Whatsapp", use_container_width=True):
                 if not phone_number:
                     st.error("Please enter a phone number.")
@@ -308,10 +309,10 @@ elif st.session_state.page == "cart":
                             files = [('media_file', ('quotation.pdf', open('quotation.pdf', 'rb'), 'application/pdf'))]
                             r1 = requests.post(upload_url, data=payload, files=files)
                             res1 = r1.json()
-                            
+
                             if res1.get("response", {}).get("status") == "success":
                                 media_id = res1["response"]["id"]
-                                
+
                                 # API 2: Send Media Message
                                 send_url = "https://mediaapi.smsgupshup.com/GatewayAPI/rest"
                                 headers = {'Content-Type': 'application/x-www-form-urlencoded'}
@@ -328,7 +329,7 @@ elif st.session_state.page == "cart":
                                     'media_id': media_id,
                                     'filename': 'Wakefit Wall Makeover Quotation.pdf',
                                     'whatsAppTemplateId': '2216484149134300',
-                                    'var1': customer_name,
+                                    'var1': st.session_state.pdf_customer_name,
                                     'var2': st.session_state.final_amount_val
                                 }
                                 r2 = requests.post(send_url, headers=headers, data=data)
