@@ -57,7 +57,7 @@ if "cart" not in st.session_state: st.session_state.cart = []
 if "page" not in st.session_state: st.session_state.page = "design_select"
 if "selected_design" not in st.session_state: st.session_state.selected_design = None
 if "selected_design_name" not in st.session_state: st.session_state.selected_design_name = None
-if "selection_mode" not in st.session_state: st.session_state.selection_mode = "Select a Design"
+if "selection_mode" not in st.session_state: st.session_state.selection_mode = "Select Material"
 if "selected_material_id" not in st.session_state: st.session_state.selected_material_id = None
 
 # Helper to format SKU
@@ -98,7 +98,7 @@ def display_footer():
 
 if st.session_state.page == "design_select":
     display_logo(); st.title("Wakefit Selector")
-    st.session_state.selection_mode = st.radio("Choose Mode", ["Select a Design", "Select Material"], index=0)
+    st.session_state.selection_mode = st.radio("Choose Mode", ["Select a Design", "Select Material"], index=1)
 
     if st.session_state.selection_mode == "Select a Design":
         mask_pub = df_design["published"].astype(str).str.strip().str.upper() == "YES" if "published" in df_design.columns else True
