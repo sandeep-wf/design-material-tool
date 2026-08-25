@@ -231,9 +231,13 @@ elif st.session_state.page == "cart":
         dp_val = dp if dp is not None else 0.0
         da = (grand_total * dp_val) / 100; ft = (grand_total - da)
         st.markdown(f"### Total (excl. delivery): ₹{ft:,.2f}")
-        uploaded_file = st.file_uploader("Hand Made Design Image", type=["png", "jpg", "jpeg"])
-        if uploaded_file:
-            st.image(uploaded_file, caption="Uploaded Design Preview", use_container_width=True)
+
+        # RENAME UPLOADER & ENABLE MULTIPLE FILES
+        uploaded_files = st.file_uploader("Reference image", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
+        if uploaded_files:
+            for uploaded_file in uploaded_files:
+                st.image(uploaded_file, caption=f"Uploaded: {uploaded_file.name}", use_container_width=True)
+
         col_clr, col_prnt = st.columns(2)
         if col_clr.button("🗑️ Clear Cart", type="primary", use_container_width=True): st.session_state.cart = []; st.rerun()
 
@@ -262,11 +266,16 @@ elif st.session_state.page == "cart":
             pdf.set_font("Arial", "", 10)
             disclaimer_txt = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
             for point in disclaimer_txt: pdf.multi_cell(190, 7, point)
-            if uploaded_file:
-                ext = uploaded_file.name.split('.')[-1]
-                tp = f"temp_design.{ext}"
-                with open(tp, "wb") as f: f.write(uploaded_file.getbuffer())
-                pdf.ln(5); pdf.cell(190, 10, "Hand Made Design:", 0, 1); pdf.image(tp, x=10, w=100)
+            
+            # PDF LOGIC FOR MULTIPLE IMAGES
+            if uploaded_files:
+                pdf.ln(5); pdf.cell(190, 10, "Reference Images:", 0, 1)
+                for idx, file in enumerate(uploaded_files):
+                    ext = file.name.split('.')[-1]
+                    tp = f"temp_design_{idx}.{ext}"
+                    with open(tp, "wb") as f: f.write(file.getbuffer())
+                    pdf.image(tp, x=10, w=100); pdf.ln(5)
+
             pdf.ln(10); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
 
             # Save locally for WhatsApp API and generate download link
