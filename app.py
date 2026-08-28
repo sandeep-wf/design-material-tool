@@ -22,8 +22,8 @@ local_css("style.css")
 # Load Data
 @st.cache_data
 def load_data():
-    path = "design-material-mapping_25_2.xlsx"
-    if not os.path.exists(path): path = "/content/design-material-mapping_25_2.xlsx"
+    path = "design-material-mapping_29_1.xlsx"
+    if not os.path.exists(path): path = "/content/design-material-mapping_29_1.xlsx"
     if not os.path.exists(path):
         st.warning(f"File not found: {path}. Creating dummy data.")
         with pd.ExcelWriter(path) as writer:
@@ -59,6 +59,7 @@ if "selected_design" not in st.session_state: st.session_state.selected_design =
 if "selected_design_name" not in st.session_state: st.session_state.selected_design_name = None
 if "selection_mode" not in st.session_state: st.session_state.selection_mode = "Select Material"
 if "selected_material_id" not in st.session_state: st.session_state.selected_material_id = None
+if "manual_entry_data" not in st.session_state: st.session_state.manual_entry_data = None
 
 # Helper to format SKU
 def format_sku(sku):
@@ -98,7 +99,7 @@ def display_footer():
 
 if st.session_state.page == "design_select":
     display_logo(); st.title("Wakefit Selector")
-    st.session_state.selection_mode = st.radio("Choose Mode", ["Select a Design", "Select Material"], index=1)
+    st.session_state.selection_mode = st.radio("Choose Mode", ["Select a Design", "Select Material", "Manual Entry"], index=1)
 
     if st.session_state.selection_mode == "Select a Design":
         mask_pub = df_design["published"].astype(str).str.strip().str.upper() == "YES" if "published" in df_design.columns else True
@@ -111,9 +112,10 @@ if st.session_state.page == "design_select":
             st.session_state.selected_design = str(design_row["design_code"].values[0])
             st.session_state.selected_design_name = selected_name
             st.session_state.selected_material_id = None
+            st.session_state.manual_entry_data = None
             if st.button("Next"): st.session_state.page = "material_listing"; st.rerun()
 
-    else:
+    elif st.session_state.selection_mode == "Select Material":
         m_crm_col = "material_crm_code" if "material_crm_code" in df_material.columns else df_material.columns[0]
         search_query = st.text_input("Search Material (e.g. S168)", "")
         if search_query.strip():
@@ -127,7 +129,23 @@ if st.session_state.page == "design_select":
             st.session_state.selected_material_id = selected_id
             st.session_state.selected_design = None
             st.session_state.selected_design_name = "Single Material Selection"
+            st.session_state.manual_entry_data = None
             if st.button("Next"): st.session_state.page = "material_listing"; st.rerun()
+            
+    elif st.session_state.selection_mode == "Manual Entry":
+        m_name = st.text_input("Product Name")
+        m_code = st.text_input("Product Code")
+        m_price = st.number_input("Product Price", min_value=0.0, step=1.0)
+        if st.button("Next"):
+            if m_name and m_code:
+                st.session_state.manual_entry_data = {"name": m_name, "code": m_code, "price": m_price}
+                st.session_state.selected_material_id = None
+                st.session_state.selected_design = None
+                st.session_state.selected_design_name = "Manual Entry Selection"
+                st.session_state.page = "material_listing"
+                st.rerun()
+            else:
+                st.error("Please enter both Product Name and Code.")
 
     display_footer()
 
@@ -137,20 +155,28 @@ elif st.session_state.page == "material_listing":
     st.markdown(f"### Materials{design_suffix}", unsafe_allow_html=True)
     if st.button("← Back", key="listing_back_top"): st.session_state.page = "design_select"; st.rerun()
     m_crm_col = "material_crm_code" if "material_crm_code" in df_material.columns else df_material.columns[0]
-    if st.session_state.selected_material_id:
+    
+    if st.session_state.manual_entry_data:
+        listing = pd.DataFrame([st.session_state.manual_entry_data])
+        m_crm_col = "code"
+        m_name_col = "name"
+        m_price_col = "price"
+    elif st.session_state.selected_material_id:
         listing = df_material[df_material[m_crm_col].astype(str) == st.session_state.selected_material_id]
+        m_name_col, m_price_col = "material_name", "price"
     else:
         target_design = st.session_state.selected_design
         m_code_col = "material_code" if "material_code" in df_mapping.columns else "material_crm_code"
         mapped_codes = df_mapping[df_mapping["design_code"] == target_design][m_code_col].unique().tolist()
         listing = df_material[df_material[m_crm_col].isin(mapped_codes)]
+        m_name_col, m_price_col = "material_name", "price"
 
     if listing.empty:
         st.warning("No materials found.")
     else:
         for i, row in listing.iterrows():
-            m_name = str(row.get("material_name", "Unknown"))
-            price = row.get("price", 0); m_id = row.get(m_crm_col)
+            m_name = str(row.get(m_name_col, "Unknown"))
+            price = row.get(m_price_col, 0); m_id = row.get(m_crm_col)
             formatted_id = format_sku(m_id)
             with st.container():
                 st.markdown(f"<div class='card material-card'><b>{m_name}</b><br>Code: {formatted_id}<br>Price: ₹{price}</div>", unsafe_allow_html=True)
@@ -266,7 +292,7 @@ elif st.session_state.page == "cart":
             pdf.set_font("Arial", "", 10)
             disclaimer_txt = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
             for point in disclaimer_txt: pdf.multi_cell(190, 7, point)
-            
+
             # PDF LOGIC FOR MULTIPLE IMAGES
             if uploaded_files:
                 pdf.ln(5); pdf.cell(190, 10, "Reference Images:", 0, 1)
