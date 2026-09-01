@@ -265,7 +265,7 @@ elif st.session_state.page == "cart":
                 st.image(uploaded_file, caption=f"Uploaded: {uploaded_file.name}", use_container_width=True)
 
         col_clr, col_prnt = st.columns(2)
-        if col_clr.button("🗑️ Clear Cart", type="primary", use_container_width=True): st.session_state.cart = []; st.rerun()
+        #if col_clr.button("🗑️ Clear Cart", type="primary", use_container_width=True): st.session_state.cart = []; st.rerun()
 
         if col_prnt.button("🖨️ Print PDF", use_container_width=True):
             delivery_charge = 1000
