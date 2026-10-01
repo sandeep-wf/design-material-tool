@@ -194,8 +194,11 @@ elif st.session_state.page == "cart":
             for d in disclaimer: pdf.cell(190, 7, d, 0, 1)
             if files:
                 for idx, f in enumerate(files):
-                    with open(f"t_{idx}.png", "wb") as tf: tf.write(f.getbuffer())
-                    pdf.add_page(); pdf.image(f"t_{idx}.png", x=10, w=100)
+                    # Dynamic extension detection to avoid "Not a PNG" error
+                    ext = f.name.split('.')[-1].lower()
+                    fname = f"t_{idx}.{ext}"
+                    with open(fname, "wb") as tf: tf.write(f.getbuffer())
+                    pdf.add_page(); pdf.image(fname, x=10, w=100)
             pdf.output("q.pdf"); b64 = base64.b64encode(open("q.pdf","rb").read()).decode('latin-1')
             href = f'<a href="data:application/octet-stream;base64,{b64}" download="Quotation.pdf"><button style="width:100%">Download PDF</button></a>'
             st.markdown(href, unsafe_allow_html=True)
