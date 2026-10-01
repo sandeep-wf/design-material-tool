@@ -35,7 +35,7 @@ def load_data():
         return df
     designs = clean_df(designs); materials = clean_df(materials); mapping = clean_df(mapping)
     for df in [designs, mapping, materials]:
-        for col in df.columns: 
+        for col in df.columns:
             if 'code' in col: df[col] = df[col].astype(str).str.strip()
     return designs, materials, mapping
 
@@ -53,11 +53,21 @@ def view_pdf_dialog(label, file_path):
     if os.path.exists(file_path):
         with open(file_path, "rb") as f:
             base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" style="border:none;"></iframe>'
+
+        # Corrected indentation for the template string
+        pdf_display = f"""
+            <div style="text-align: center;">
+                <iframe src="data:application/pdf;base64,{base64_pdf}#toolbar=0&navpanes=0&scrollbar=0" width="100%" height="500" style="border:1px solid #1A237E; border-radius:8px;"></iframe>
+                <p style="margin-top: 10px;">PDF not loading? 
+                    <a href="data:application/pdf;base64,{base64_pdf}" target="_blank" style="color:#1A237E; font-weight:bold;">Open in New Tab ↗</a>
+                </p>
+            </div>
+        """
         st.markdown(pdf_display, unsafe_allow_html=True)
     else:
         st.error(f"File {file_path} not found.")
-    if st.button("Close Modal"):
+
+    if st.button("Done", use_container_width=True):
         st.rerun()
 
 @st.dialog("Share via WhatsApp")
@@ -90,12 +100,12 @@ def display_header():
     total_items = sum(item['qty'] for item in st.session_state.cart)
     if st.session_state.page == "cart":
         col1, col2 = st.columns([1, 1])
-        if col1.button("🏠 Home", key="top_home_btn"): st.session_state.cart = []; st.session_state.page = "design_select"; st.rerun()
+        if col1.button("ጃ Home", key="top_home_btn"): st.session_state.cart = []; st.session_state.page = "design_select"; st.rerun()
         if col2.button("← Back", key="top_back_btn"): st.session_state.page = "material_listing"; st.rerun()
     elif st.session_state.page == "catalog":
         if st.button("← Back to Home"): st.session_state.page = "design_select"; st.rerun()
     else:
-        if st.button(f"🛒 Cart ({total_items})", key="sticky_cart_btn"): st.session_state.page = "cart"; st.rerun()
+        if st.button(f"ጃ Cart ({total_items})", key="sticky_cart_btn"): st.session_state.page = "cart"; st.rerun()
 
 display_header()
 
@@ -110,13 +120,15 @@ if st.session_state.page == "catalog":
                 view_pdf_dialog(label, file_path)
             if os.path.exists(file_path):
                 with open(file_path, "rb") as f:
-                    col_down.download_button("📥", data=f, file_name=file_path, mime="application/pdf", key=f"dl_{label}")
-            if col_wa.button("💬", key=f"wa_{label}"): share_whatsapp_dialog(label, file_path)
+                    col_down.download_button("ጥ", data=f, file_name=file_path, mime="application/pdf", key=f"dl_{label}")
+            else:
+                col_down.button("❌", disabled=True, key=f"missing_{label}")
+            if col_wa.button("ጐ", key=f"wa_{label}"): share_whatsapp_dialog(label, file_path)
             st.divider()
 
 elif st.session_state.page == "design_select":
     st.title("Wakefit Selector")
-    if st.button("View Catalog 📂", use_container_width=True): st.session_state.page = "catalog"; st.rerun()
+    if st.button("View Catalog ጢ", use_container_width=True): st.session_state.page = "catalog"; st.rerun()
     st.session_state.selection_mode = st.radio("Choose Mode", ["Select a Design", "Select Material", "Manual Entry"], index=1)
     if st.session_state.selection_mode == "Select a Design":
         active_designs = df_design[((df_design["published"].astype(str).str.upper() == "YES") & (df_design["active"].astype(str).str.upper() == "YES"))]
