@@ -160,7 +160,8 @@ elif st.session_state.page == "cart":
     c_name = st.text_input("Customer Name", key="cn_in"); p_phone = st.text_input("Phone (91...)", key="ph_in")
     p_name = st.selectbox("Partner", ["Rajesh", "Nirmal"], key="pn_sel"); remarks = st.text_area("Remarks", key="rem_in")
     if not st.session_state.cart:
-        st.info("Cart is empty."); if st.button("Back"): st.session_state.page = "design_select"; st.rerun()
+        st.info("Cart is empty.")
+        if st.button("Back"): st.session_state.page = "design_select"; st.rerun()
     else:
         gt = 0
         for i, item in enumerate(st.session_state.cart):
@@ -169,7 +170,7 @@ elif st.session_state.page == "cart":
                 c1, c2 = st.columns([3, 1])
                 c1.markdown(f"<b>{item['name']}</b><br><small>SKU: {format_sku(item['id'])}</small><br>₹{item['price']} x {item['qty']} = ₹{it:,.2f}", unsafe_allow_html=True)
                 nq = c2.number_input("Qty", 0, 100, item['qty'], key=f"ed_{i}")
-                if nq != item['qty']: 
+                if nq != item['qty']:
                     if nq == 0: st.session_state.cart.pop(i)
                     else: st.session_state.cart[i]['qty'] = nq
                     st.rerun()
