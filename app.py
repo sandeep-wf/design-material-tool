@@ -177,37 +177,63 @@ elif st.session_state.page == "cart":
         st.divider(); dp = st.number_input("Discount %", 0.0, 100.0, 0.0, step=0.1); da = (gt*dp)/100; ft = gt - da + 1000
         st.markdown(f"### Total (incl. ₹1000 delivery): ₹{ft:,.2f}")
         files = st.file_uploader("Reference Images", type=["png","jpg","jpeg"], accept_multiple_files=True)
+        
         if st.button("Print PDF", use_container_width=True):
             pdf = FPDF(); pdf.add_page(); pdf.set_font("Arial", "B", 16)
             try: pdf.image('wakefit logo.png', x=175, y=10, w=25)
             except: pass
             pdf.cell(190, 10, "Wakefit Quotation", 0, 1, "C"); pdf.ln(5); pdf.set_font("Arial", "", 12)
-            pdf.cell(190, 10, f"Customer: {c_name}", 0, 1); pdf.cell(190, 10, f"Design: {st.session_state.get('selected_design_name')}", 0, 1); pdf.cell(190, 10, f"Date: {date.today()}", 0, 1); pdf.ln(5)
-            pdf.set_font("Arial", "B", 12); pdf.cell(100, 10, "Product", 1); pdf.cell(20, 10, "Qty", 1); pdf.cell(35, 10, "Price", 1); pdf.cell(35, 10, "Total", 1, 1)
+            pdf.cell(190, 10, f"Customer: {c_name}", 0, 1); pdf.cell(190, 10, f"Partner: {p_name}", 0, 1)
+            pdf.cell(190, 10, f"Design: {st.session_state.get('selected_design_name')}", 0, 1); pdf.cell(190, 10, f"Date: {date.today()}", 0, 1); pdf.multi_cell(190, 10, f"Remarks: {remarks}"); pdf.ln(5)
+            pdf.set_font("Arial", "B", 12); pdf.cell(100, 10, "Product", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
             pdf.set_font("Arial", "", 10)
             for item in st.session_state.cart:
                 y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f"{item['name']} ({item['id']})", 1); rh = pdf.get_y() - y_pre
-                pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1); pdf.cell(35, rh, str(item['price']), 1); pdf.cell(35, rh, str(item['price']*item['qty']), 1, 1)
-            pdf.cell(155, 10, "Final Total (with Delivery)", 1); pdf.cell(35, 10, f"{ft:,.2f}", 1, 1)
-            pdf.ln(5); pdf.set_font("Arial", "B", 10); pdf.cell(190, 10, "Disclaimer:", 0, 1); pdf.set_font("Arial", "", 9)
-            disclaimer = ["1: Not an invoice.", "2: Valid for 15 days.", "3: Discount valid for 3 days.", "4: WhatsApp +91-9071079479"]
-            for d in disclaimer: pdf.cell(190, 7, d, 0, 1)
+                pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']*item['qty']}", 1, 1, "C")
+            
+            pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Items Subtotal", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{gt:,.2f}", 1, 1, "C")
+            if dp > 0:
+                pdf.set_font("Arial", "", 10); pdf.cell(155, 10, f"Discount ({dp}%) ", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{da:,.2f}", 1, 1, "C")
+            pdf.set_font("Arial", "", 10); pdf.cell(155, 10, "Delivery Charges", 1, 0, "R"); pdf.cell(35, 10, "Rs.1,000.00", 1, 1, "C")
+            pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Final Amount", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{ft:,.2f}", 1, 1, "C")
+            
+            pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.cell(190, 10, "Disclaimer:", 0, 1); pdf.set_font("Arial", "", 10)
+            disclaimer = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
+            for d in disclaimer: pdf.multi_cell(190, 7, d)
+            
             if files:
+                pdf.ln(5); pdf.cell(190, 10, "Reference Images:", 0, 1)
                 for idx, f in enumerate(files):
-                    # Dynamic extension detection to avoid "Not a PNG" error
                     ext = f.name.split('.')[-1].lower()
                     fname = f"t_{idx}.{ext}"
                     with open(fname, "wb") as tf: tf.write(f.getbuffer())
-                    pdf.add_page(); pdf.image(fname, x=10, w=100)
+                    pdf.image(fname, x=10, w=100); pdf.ln(5)
+            
             pdf.output("q.pdf"); b64 = base64.b64encode(open("q.pdf","rb").read()).decode('latin-1')
             href = f'<a href="data:application/octet-stream;base64,{b64}" download="Quotation.pdf"><button style="width:100%">Download PDF</button></a>'
             st.markdown(href, unsafe_allow_html=True)
             st.session_state.pdf_ready = True
+            st.session_state.final_amt_str = f"{ft:,.2f}"
+            st.session_state.pdf_customer = c_name
 
         if st.session_state.get("pdf_ready") and st.button("Share on WhatsApp", use_container_width=True):
-            if p_phone:
-                st.info("Connecting to Gupshup API...")
-                # Gupshup API implementation logic here
-            else: st.error("Enter phone number.")
+            if not p_phone: st.error("Enter phone number.")
+            else:
+                with st.spinner("Sending to WhatsApp..."):
+                    try:
+                        up_url = "https://media.smsgupshup.com/GatewayAPI/rest"
+                        payload = {'method': 'UploadMedia', 'media_type': 'document', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot'}
+                        files_api = [('media_file', ('quotation.pdf', open('q.pdf', 'rb'), 'application/pdf'))]
+                        r1 = requests.post(up_url, data=payload, files=files_api).json()
+                        if r1.get("response", {}).get("status") == "success":
+                            mid = r1["response"]["id"]
+                            send_url = "https://mediaapi.smsgupshup.com/GatewayAPI/rest"
+                            headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+                            data = {'method': 'SENDMEDIAMESSAGE', 'send_to': p_phone, 'msg_type': 'DOCUMENT', 'isHSM': 'true', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot', 'media_id': mid, 'filename': 'Wakefit Wall Makeover Quotation.pdf', 'whatsAppTemplateId': '2216484149134300', 'var1': st.session_state.pdf_customer, 'var2': st.session_state.final_amt_str}
+                            r2 = requests.post(send_url, headers=headers, data=data)
+                            if r2.status_code == 200: st.success("Quotation shared successfully!")
+                            else: st.error("API send error.")
+                        else: st.error("Upload failed.")
+                    except Exception as e: st.error(f"Integration error: {e}")
 
         if st.button("← Back to Materials"): st.session_state.page = "material_listing"; st.rerun()
