@@ -11,7 +11,6 @@ import json
 # Page Config
 st.set_page_config(page_title="Wakefit PWA", layout="centered")
 
-# Inject Custom CSS
 def local_css(file_name):
     if os.path.exists(file_name):
         with open(file_name) as f:
@@ -19,7 +18,6 @@ def local_css(file_name):
 
 local_css("style.css")
 
-# Load Data
 @st.cache_data
 def load_data():
     path = "design-material-mapping_25_2.xlsx"
@@ -60,6 +58,7 @@ if "selected_design_name" not in st.session_state: st.session_state.selected_des
 if "selection_mode" not in st.session_state: st.session_state.selection_mode = "Select Material"
 if "selected_material_id" not in st.session_state: st.session_state.selected_material_id = None
 if "manual_entry_data" not in st.session_state: st.session_state.manual_entry_data = None
+if "saved_phone" not in st.session_state: st.session_state.saved_phone = ""
 
 # Helper to format SKU
 def format_sku(sku):
@@ -80,6 +79,10 @@ def display_header():
         if col2.button("← Back", key="top_back_btn"):
             st.session_state.page = "material_listing"
             st.rerun()
+    elif st.session_state.page == "catalog":
+        if st.button("← Back to Home"):
+            st.session_state.page = "design_select"
+            st.rerun()
     else:
         if st.button(f"🛒 Cart ({total_items})", key="sticky_cart_btn"):
             st.session_state.page = "cart"
@@ -97,8 +100,70 @@ def display_logo():
 def display_footer():
     st.markdown("<br><hr><p style='text-align: center;'>© 2026 Wakefit. All Rights Reserved</p>", unsafe_allow_html=True)
 
-if st.session_state.page == "design_select":
+# --- CATALOG PAGE ---
+if st.session_state.page == "catalog":
+    display_logo(); st.title("Catalog")
+    
+    catalogs = {
+        "PVC Catalog": "pvc.pdf",
+        "UV Sheet": "uv.pdf",
+        "Charcoal": "charcoal.pdf",
+        "CPC": "cpc.pdf",
+        "Designs": "design.pdf",
+        "Past Work": "past.pdf"
+    }
+
+    for label, file_path in catalogs.items():
+        with st.expander(label):
+            c_view, c_share = st.columns([3, 1])
+            if os.path.exists(file_path):
+                with open(file_path, "rb") as f:
+                    base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+                pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="400" type="application/pdf"></iframe>'
+                st.markdown(pdf_display, unsafe_allow_html=True)
+            else:
+                st.warning(f"{file_path} not found.")
+
+            if c_share.button(f"Share via WhatsApp", key=f"share_{label}"):
+                st.session_state[f"prompt_share_{label}"] = True
+            
+            if st.session_state.get(f"prompt_share_{label}"):
+                phone = st.text_input("Enter Phone Number:", value=st.session_state.saved_phone, key=f"phone_{label}")
+                if st.button("Send", key=f"send_{label}"):
+                    if not phone:
+                        st.error("Please enter a phone number.")
+                    else:
+                        st.session_state.saved_phone = phone
+                        with st.spinner(f"Sharing {label}..."):
+                            try:
+                                upload_url = "https://media.smsgupshup.com/GatewayAPI/rest"
+                                payload = {'method': 'UploadMedia', 'media_type': 'document', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot'}
+                                with open(file_path, 'rb') as f:
+                                    files = [('media_file', (file_path, f, 'application/pdf'))]
+                                    r1 = requests.post(upload_url, data=payload, files=files)
+                                    res1 = r1.json()
+
+                                if res1.get("response", {}).get("status") == "success":
+                                    media_id = res1["response"]["id"]
+                                    send_url = "https://mediaapi.smsgupshup.com/GatewayAPI/rest"
+                                    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+                                    data = {'method': 'SENDMEDIAMESSAGE', 'send_to': phone, 'msg_type': 'DOCUMENT', 'isHSM': 'true', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot', 'media_id': media_id, 'filename': f'Wakefit_{label}.pdf', 'whatsAppTemplateId': '2216484149134300', 'var1': 'Customer', 'var2': 'Catalog'}
+                                    r2 = requests.post(send_url, headers=headers, data=data)
+                                    if r2.status_code == 200: st.success("Shared successfully!")
+                                    else: st.error(f"Failed: {r2.text}")
+                                else: st.error("Media upload failed.")
+                            except Exception as e: st.error(f"Error: {e}")
+                        st.session_state[f"prompt_share_{label}"] = False
+                        st.rerun()
+
+# --- DESIGN SELECTION PAGE ---
+elif st.session_state.page == "design_select":
     display_logo(); st.title("Wakefit Selector")
+    
+    if st.button("View Catalog 📂", use_container_width=True):
+        st.session_state.page = "catalog"
+        st.rerun()
+
     st.session_state.selection_mode = st.radio("Choose Mode", ["Select a Design", "Select Material", "Manual Entry"], index=1)
 
     if st.session_state.selection_mode == "Select a Design":
@@ -131,7 +196,7 @@ if st.session_state.page == "design_select":
             st.session_state.selected_design_name = "Single Material Selection"
             st.session_state.manual_entry_data = None
             if st.button("Next"): st.session_state.page = "material_listing"; st.rerun()
-            
+
     elif st.session_state.selection_mode == "Manual Entry":
         m_name = st.text_input("Product Name")
         m_code = st.text_input("Product Code")
@@ -146,7 +211,6 @@ if st.session_state.page == "design_select":
                 st.rerun()
             else:
                 st.error("Please enter both Product Name and Code.")
-
     display_footer()
 
 elif st.session_state.page == "material_listing":
@@ -155,7 +219,7 @@ elif st.session_state.page == "material_listing":
     st.markdown(f"### Materials{design_suffix}", unsafe_allow_html=True)
     if st.button("← Back", key="listing_back_top"): st.session_state.page = "design_select"; st.rerun()
     m_crm_col = "material_crm_code" if "material_crm_code" in df_material.columns else df_material.columns[0]
-    
+
     if st.session_state.manual_entry_data:
         listing = pd.DataFrame([st.session_state.manual_entry_data])
         m_crm_col = "code"
@@ -210,7 +274,7 @@ elif st.session_state.page == "material_listing":
                     found = False
                     for item in st.session_state.cart:
                         if item["id"] == m_id and item["name" ] == item_name_final:
-                            item["qty" ] += qty; found = True; break
+                            item["qty"] += qty; found = True; break
                     if not found:
                         st.session_state.cart.append({"name": item_name_final, "qty": qty, "id": m_id, "price": float(price)})
                     st.toast("Added!")
@@ -222,7 +286,7 @@ elif st.session_state.page == "material_listing":
 elif st.session_state.page == "cart":
     display_logo(); st.title("Your Cart")
     customer_name = st.text_input("Customer Name", key="customer_name_input")
-    phone_number = st.text_input("Phone number:", key="phone_number_input", placeholder="919XXXXXXXXX")
+    phone_number = st.text_input("Phone number:", value=st.session_state.saved_phone, key="phone_number_input", placeholder="919XXXXXXXXX")
     partner_name = st.selectbox("Select Partner", ["Rajesh", "Nirmal"], key="partner_name_select")
     special_remarks = st.text_area("Special Remarks", key="special_remarks_input")
 
@@ -258,16 +322,13 @@ elif st.session_state.page == "cart":
         da = (grand_total * dp_val) / 100; ft = (grand_total - da)
         st.markdown(f"### Total (excl. delivery): ₹{ft:,.2f}")
 
-        # RENAME UPLOADER & ENABLE MULTIPLE FILES
         uploaded_files = st.file_uploader("Reference image", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
         if uploaded_files:
             for uploaded_file in uploaded_files:
                 st.image(uploaded_file, caption=f"Uploaded: {uploaded_file.name}", use_container_width=True)
 
-        col_clr, col_prnt = st.columns(2)
-        #if col_clr.button("🗑️ Clear Cart", type="primary", use_container_width=True): st.session_state.cart = []; st.rerun()
-
-        if col_prnt.button("🖨️ Print PDF", use_container_width=True):
+        if st.button("🖨️ Print PDF", use_container_width=True):
+            st.session_state.saved_phone = phone_number
             delivery_charge = 1000
             final_amount_with_delivery = ft + delivery_charge
 
@@ -293,7 +354,6 @@ elif st.session_state.page == "cart":
             disclaimer_txt = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
             for point in disclaimer_txt: pdf.multi_cell(190, 7, point)
 
-            # PDF LOGIC FOR MULTIPLE IMAGES
             if uploaded_files:
                 pdf.ln(5); pdf.cell(190, 10, "Reference Images:", 0, 1)
                 for idx, file in enumerate(uploaded_files):
@@ -304,7 +364,6 @@ elif st.session_state.page == "cart":
 
             pdf.ln(10); pdf.set_font("Arial", "", 8); pdf.cell(190, 10, "© 2026 Wakefit. All Rights Reserved", 0, 0, "C")
 
-            # Save locally for WhatsApp API and generate download link
             local_pdf_path = "quotation.pdf"
             pdf.output(local_pdf_path)
 
@@ -330,51 +389,21 @@ elif st.session_state.page == "cart":
                 else:
                     with st.spinner("Sharing quotation..."):
                         try:
-                            # API 1: Upload Media
                             upload_url = "https://media.smsgupshup.com/GatewayAPI/rest"
-                            payload = {
-                                'method': 'UploadMedia',
-                                'media_type': 'document',
-                                'v': '1.1',
-                                'format': 'json',
-                                'auth_scheme': 'plain',
-                                'userid': '2000264220',
-                                'password': 'IakKOS7Ot'
-                            }
+                            payload = {'method': 'UploadMedia', 'media_type': 'document', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot'}
                             files = [('media_file', ('quotation.pdf', open('quotation.pdf', 'rb'), 'application/pdf'))]
                             r1 = requests.post(upload_url, data=payload, files=files)
                             res1 = r1.json()
 
                             if res1.get("response", {}).get("status") == "success":
                                 media_id = res1["response"]["id"]
-
-                                # API 2: Send Media Message
                                 send_url = "https://mediaapi.smsgupshup.com/GatewayAPI/rest"
                                 headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-                                data = {
-                                    'method': 'SENDMEDIAMESSAGE',
-                                    'send_to': phone_number,
-                                    'msg_type': 'DOCUMENT',
-                                    'isHSM': 'true',
-                                    'v': '1.1',
-                                    'format': 'json',
-                                    'auth_scheme': 'plain',
-                                    'userid': '2000264220',
-                                    'password': 'IakKOS7Ot',
-                                    'media_id': media_id,
-                                    'filename': 'Wakefit Wall Makeover Quotation.pdf',
-                                    'whatsAppTemplateId': '2216484149134300',
-                                    'var1': st.session_state.pdf_customer_name,
-                                    'var2': st.session_state.final_amount_val
-                                }
+                                data = {'method': 'SENDMEDIAMESSAGE', 'send_to': phone_number, 'msg_type': 'DOCUMENT', 'isHSM': 'true', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot', 'media_id': media_id, 'filename': 'Wakefit Wall Makeover Quotation.pdf', 'whatsAppTemplateId': '2216484149134300', 'var1': st.session_state.pdf_customer_name, 'var2': st.session_state.final_amount_val}
                                 r2 = requests.post(send_url, headers=headers, data=data)
-                                if r2.status_code == 200:
-                                    st.success("Shared successfully on WhatsApp!")
-                                else:
-                                    st.error(f"Failed to send message: {r2.text}")
-                            else:
-                                st.error("Media upload failed.")
-                        except Exception as e:
-                            st.error(f"An error occurred: {e}")
+                                if r2.status_code == 200: st.success("Shared successfully on WhatsApp!")
+                                else: st.error(f"Failed to send message: {r2.text}")
+                            else: st.error("Media upload failed.")
+                        except Exception as e: st.error(f"An error occurred: {e}")
 
     display_footer()
