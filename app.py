@@ -66,16 +66,20 @@ display_header()
 
 if st.session_state.page == "catalog":
     st.title("Catalog Collection")
-    catalogs = {"PVC Catalog": "pvc.pdf", "UV Sheet": "uv.pdf", "Charcoal": "charcoal.pdf", "CPC": "cpc.pdf", "3D Panels": "3d.pdf", "Designs": "design.pdf", "Past Work": "past.pdf"}
-    for label, file_path in catalogs.items():
+    catalogs = {
+        "PVC Catalog": "https://drive.google.com/file/d/10LUyPDgujBybJlfZNyIzK5VpfKZDs5ij/view?usp=drive_link",
+        "UV Sheet": "https://drive.google.com/file/d/1FxS0O_fqqt1w7Byf7Dn22DASxscPzWCb/view?usp=drive_link",
+        "Charcoal": "https://drive.google.com/file/d/1nkRSJwNA1FIoLCrP9yE9BCVaV1a73Tzj/view?usp=drive_link",
+        "CPC": "https://drive.google.com/file/d/1js1V5MwR8xzK5q1Hw_6qiPnlMKKwOQSx/view?usp=drive_link",
+        "3D Panels": "https://drive.google.com/file/d/1kscAm3rP8zVeM9lIHIDAWDOFCsIrMMLh/view?usp=drive_link",
+        "Designs": "https://drive.google.com/file/d/1LNeHU4vL-hTFk00yT3nexyaw5thEwqa8/view?usp=drive_link",
+        "Past Work": "https://drive.google.com/file/d/11Xh3uKRSB5P6sqfWi1nqIEJyJ9ZPXBZJ/view?usp=drive_link"
+    }
+    for label, link_url in catalogs.items():
         with st.container():
             col_label, col_down = st.columns([3, 1])
             col_label.markdown(f"### {label}")
-            if os.path.exists(file_path):
-                with open(file_path, "rb") as f:
-                    col_down.download_button("Download", data=f, file_name=file_path, mime="application/pdf", key=f"dl_{label}", use_container_width=True)
-            else:
-                col_down.button("File Missing", disabled=True, key=f"missing_{label}", use_container_width=True)
+            col_down.link_button("View", url=link_url, use_container_width=True, key=f"lnk_{label}")
             st.divider()
 
 elif st.session_state.page == "design_select":
@@ -177,7 +181,7 @@ elif st.session_state.page == "cart":
         st.divider(); dp = st.number_input("Discount %", 0.0, 100.0, 0.0, step=0.1); da = (gt*dp)/100; ft = gt - da + 1000
         st.markdown(f"### Total (incl. ₹1000 delivery): ₹{ft:,.2f}")
         files = st.file_uploader("Reference Images", type=["png","jpg","jpeg"], accept_multiple_files=True)
-        
+
         if st.button("Print PDF", use_container_width=True):
             pdf = FPDF(); pdf.add_page(); pdf.set_font("Arial", "B", 16)
             try: pdf.image('wakefit logo.png', x=175, y=10, w=25)
@@ -190,17 +194,17 @@ elif st.session_state.page == "cart":
             for item in st.session_state.cart:
                 y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f"{item['name']} ({item['id']})", 1); rh = pdf.get_y() - y_pre
                 pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']*item['qty']}", 1, 1, "C")
-            
+
             pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Items Subtotal", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{gt:,.2f}", 1, 1, "C")
             if dp > 0:
                 pdf.set_font("Arial", "", 10); pdf.cell(155, 10, f"Discount ({dp}%) ", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{da:,.2f}", 1, 1, "C")
             pdf.set_font("Arial", "", 10); pdf.cell(155, 10, "Delivery Charges", 1, 0, "R"); pdf.cell(35, 10, "Rs.1,000.00", 1, 1, "C")
             pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Final Amount", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{ft:,.2f}", 1, 1, "C")
-            
+
             pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.cell(190, 10, "Disclaimer:", 0, 1); pdf.set_font("Arial", "", 10)
             disclaimer = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
             for d in disclaimer: pdf.multi_cell(190, 7, d)
-            
+
             if files:
                 pdf.ln(5); pdf.cell(190, 10, "Reference Images:", 0, 1)
                 for idx, f in enumerate(files):
@@ -208,7 +212,7 @@ elif st.session_state.page == "cart":
                     fname = f"t_{idx}.{ext}"
                     with open(fname, "wb") as tf: tf.write(f.getbuffer())
                     pdf.image(fname, x=10, w=100); pdf.ln(5)
-            
+
             pdf.output("q.pdf"); b64 = base64.b64encode(open("q.pdf","rb").read()).decode('latin-1')
             href = f'<a href="data:application/octet-stream;base64,{b64}" download="Quotation.pdf"><button style="width:100%">Download PDF</button></a>'
             st.markdown(href, unsafe_allow_html=True)
