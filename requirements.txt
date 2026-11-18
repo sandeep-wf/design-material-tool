@@ -3,4 +3,3 @@ pandas
 openpyxl
 fpdf
 requests
-google-genai
