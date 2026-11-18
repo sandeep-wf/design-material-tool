@@ -7,6 +7,8 @@ from fpdf import FPDF
 import base64
 import requests
 import json
+from google import genai
+from google.colab import userdata
 
 # Page Config
 st.set_page_config(page_title="Wakefit PWA", layout="centered")
@@ -44,8 +46,26 @@ try:
 except Exception as e:
     st.error(f"Error: {e}"); st.stop()
 
+# MASTER PRODUCT MAPPING WITH CODE & PRICE
+MASTER_PRODUCTS = [
+    {"name": "PVC panel", "code": "WHSWPLPS002", "price": 1000.0},
+    {"name": "charcoal panel", "code": "WHSWPLCS091", "price": 1500.0},
+    {"name": "charcoal 1ft panel", "code": "WHSWPLCS014", "price": 2500.0},
+    {"name": "UV sheet", "code": "WHSWPLUGGS234", "price": 5000.0},
+    {"name": "CPC sheet", "code": "WHSWPLCPCS142", "price": 7500.0},
+    {"name": "LED light", "code": "WHSWLTLEDS164", "price": 1500.0},
+    {"name": "LED Aluminium profile", "code": "WHSWLTLEDS165", "price": 500.0},
+    {"name": "LED adapter", "code": "WHSWLTLEDS167", "price": 1500.0},
+    {"name": "PVC board", "code": "WHSWBDPS161", "price": 2500.0},
+    {"name": "Aluminium channel", "code": "WHSWCHALS162", "price": 1000.0},
+    {"name": "PVC L bidding", "code": "WHSWBIP01S209", "price": 500.0},
+    {"name": "T or L trim", "code": "WHSWTSSGG6TS231", "price": 600.0},
+    {"name": "Silicon glue", "code": "WHSWGLSS168", "price": 500.0}
+]
+
 if "cart" not in st.session_state: st.session_state.cart = []
 if "page" not in st.session_state: st.session_state.page = "design_select"
+if "uploaded_reference_sketches" not in st.session_state: st.session_state.uploaded_reference_sketches = []
 
 def format_sku(sku):
     sku_str = str(sku)
@@ -63,6 +83,48 @@ def display_header():
         if st.button(f"🛒 Cart ({total_items})", key="sticky_cart_btn"): st.session_state.page = "cart"; st.rerun()
 
 display_header()
+
+def parse_handwritten_quote(image_bytes):
+    try:
+        api_key = userdata.get('GEMINI_API_KEY')
+    except Exception:
+        api_key = os.environ.get('GEMINI_API_KEY')
+    if not api_key:
+        st.error("Gemini API key is not configured.")
+        return []
+    try:
+        client = genai.Client(api_key=api_key)
+        prompt = \"\"\"
+        Analyze this hand-drawn material sketch or quotation list.
+        Identify matching materials from our master list and extract quantities:
+        1. PVC panel
+        2. charcoal panel
+        3. charcoal 1ft panel
+        4. UV sheet
+        5. CPC sheet
+        6. LED light
+        7. LED Aluminium profile
+        8. LED adapter
+        9. PVC board
+        10. Aluminium channel
+        11. PVC L bidding
+        12. T or L trim
+        13. Silicon glue
+        
+        Output MUST be a valid JSON array of objects with keys \"name\" and \"qty\".
+        Do not output any markdown formatting.
+        \"\"\"
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[prompt, {'inline_data': {'mime_type': 'image/png', 'data': base64.b64encode(image_bytes).decode('utf-8')}}]
+        )
+        txt = response.text.strip()
+        if txt.startswith("```json"): txt = txt[7:]
+        if txt.endswith("```"): txt = txt[:-3]
+        return json.loads(txt.strip())
+    except Exception as e:
+        st.error(f"AI Parsing error: {e}")
+        return []
 
 if st.session_state.page == "catalog":
     st.title("Catalog Collection")
@@ -85,6 +147,30 @@ if st.session_state.page == "catalog":
 elif st.session_state.page == "design_select":
     st.title("Wakefit Selector")
     if st.button("View Catalogs", use_container_width=True): st.session_state.page = "catalog"; st.rerun()
+    
+    st.write("--- ")
+    st.subheader("📸 Create Quote from Hand-drawn Sketch")
+    captured_image = st.camera_input("Capture Sketch to Parse Items Directly")
+    if captured_image:
+        img_bytes = captured_image.getvalue()
+        with st.spinner("Processing sketch..."):
+            parsed_items = parse_handwritten_quote(img_bytes)
+            if parsed_items:
+                st.session_state.uploaded_reference_sketches.append({"name": f"Camera_Capture_{date.today()}.png", "bytes": img_bytes})
+                for parsed in parsed_items:
+                    matched = next((p for p in MASTER_PRODUCTS if p["name"].lower() == parsed["name"].lower()), None)
+                    if matched:
+                        st.session_state.cart.append({
+                            "name": matched["name"],
+                            "qty": int(parsed["qty"]),
+                            "id": matched["code"],
+                            "price": matched["price"]
+                        })
+                st.success("Quotation elements added to cart!")
+                st.session_state.page = "cart"
+                st.rerun()
+
+    st.write("--- ")
     st.session_state.selection_mode = st.radio("Choose Mode", ["Select a Design", "Select Material", "Manual Entry"], index=1)
     if st.session_state.selection_mode == "Select a Design":
         active_designs = df_design[((df_design["published"].astype(str).str.upper() == "YES") & (df_design["active"].astype(str).str.upper() == "YES"))]
@@ -118,7 +204,6 @@ elif st.session_state.page == "material_listing":
     st.markdown(f"### Materials ({st.session_state.get('selected_design_name', 'Selection')})")
     if st.button("← Back", key="listing_back_top"): st.session_state.page = "design_select"; st.rerun()
     m_crm_col = "material_crm_code"
-
     if st.session_state.get("manual_entry_data"):
         listing = pd.DataFrame([st.session_state["manual_entry_data"]])
         m_crm_col = "code"
@@ -127,7 +212,6 @@ elif st.session_state.page == "material_listing":
     else:
         codes = df_mapping[df_mapping["design_code"] == st.session_state.get("selected_design")]["material_crm_code"].unique().tolist()
         listing = df_material[df_material[m_crm_col].isin(codes)]
-
     for i, row in listing.iterrows():
         m_name = str(row.get("material_name", row.get("name", "Unknown")))
         m_price = row.get("price", 0); m_id = row.get(m_crm_col)
@@ -144,7 +228,6 @@ elif st.session_state.page == "material_listing":
                 c1, c2 = st.columns(2)
                 s1 = c1.selectbox("Material", ["WPC", "PVC"], key=f"bm_{i}")
                 s2 = c2.selectbox("Number", [f"{x:02d}" for x in range(1, 16)], key=f"bn_{i}")
-
             cq, ca = st.columns([1, 2])
             qty = cq.number_input("Qty", 1, 100, 1, key=f"qty_{i}")
             if ca.button("Add to Cart", key=f"add_{i}"):
@@ -181,6 +264,11 @@ elif st.session_state.page == "cart":
         st.divider(); dp = st.number_input("Discount %", 0.0, 100.0, 0.0, step=0.1); da = (gt*dp)/100; ft = gt - da + 1000
         st.markdown(f"### Total (incl. ₹1000 delivery): ₹{ft:,.2f}")
         files = st.file_uploader("Reference Images", type=["png","jpg","jpeg"], accept_multiple_files=True)
+        
+        if st.session_state.uploaded_reference_sketches:
+            st.write("**Captured Sketches Added:**")
+            for idx, sketch in enumerate(st.session_state.uploaded_reference_sketches):
+                st.image(sketch["bytes"], caption=sketch["name"], use_container_width=True)
 
         if st.button("Print PDF", use_container_width=True):
             pdf = FPDF(); pdf.add_page(); pdf.set_font("Arial", "B", 16)
@@ -192,9 +280,8 @@ elif st.session_state.page == "cart":
             pdf.set_font("Arial", "B", 12); pdf.cell(100, 10, "Product", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
             pdf.set_font("Arial", "", 10)
             for item in st.session_state.cart:
-                y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f"{item['name']} ({item['id']})", 1); rh = pdf.get_y() - y_pre
+                y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f\"{item['name']} ({item['id']})\", 1); rh = pdf.get_y() - y_pre
                 pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']*item['qty']}", 1, 1, "C")
-
             pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Items Subtotal", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{gt:,.2f}", 1, 1, "C")
             if dp > 0:
                 pdf.set_font("Arial", "", 10); pdf.cell(155, 10, f"Discount ({dp}%) ", 1, 0, "R"); pdf.cell(35, 10, f"- Rs.{da:,.2f}", 1, 1, "C")
@@ -204,13 +291,18 @@ elif st.session_state.page == "cart":
             pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.cell(190, 10, "Disclaimer:", 0, 1); pdf.set_font("Arial", "", 10)
             disclaimer = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
             for d in disclaimer: pdf.multi_cell(190, 7, d)
-
             if files:
                 pdf.ln(5); pdf.cell(190, 10, "Reference Images:", 0, 1)
                 for idx, f in enumerate(files):
                     ext = f.name.split('.')[-1].lower()
                     fname = f"t_{idx}.{ext}"
                     with open(fname, "wb") as tf: tf.write(f.getbuffer())
+                    pdf.image(fname, x=10, w=100); pdf.ln(5)
+            if st.session_state.uploaded_reference_sketches:
+                pdf.ln(5); pdf.cell(190, 10, "Captured Reference Sketches:", 0, 1)
+                for idx, sketch in enumerate(st.session_state.uploaded_reference_sketches):
+                    fname = f"cam_sketch_{idx}.png"
+                    with open(fname, "wb") as tf: tf.write(sketch["bytes"])
                     pdf.image(fname, x=10, w=100); pdf.ln(5)
 
             pdf.output("q.pdf"); b64 = base64.b64encode(open("q.pdf","rb").read()).decode('latin-1')
