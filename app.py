@@ -20,8 +20,8 @@ local_css("style.css")
 
 @st.cache_data
 def load_data():
-    path = "design-material-mapping_25_2.xlsx"
-    if not os.path.exists(path): path = "/content/design-material-mapping_25_2.xlsx"
+    path = "design-material-mapping_19_1.xlsx"
+    if not os.path.exists(path): path = "/content/design-material-mapping_19_1.xlsx"
     if not os.path.exists(path):
         with pd.ExcelWriter(path) as writer:
             pd.DataFrame({'design_code': ['D001'], 'design_name': ['Sample Design'], 'published': ['YES'], 'active': ['YES']}).to_excel(writer, sheet_name=0, index=False)
