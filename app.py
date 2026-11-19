@@ -71,7 +71,7 @@ if st.session_state.page == "catalog":
         "UV Sheet": "https://drive.google.com/file/d/1FxS0O_fqqt1w7Byf7Dn22DASxscPzWCb/view?usp=drive_link",
         "Charcoal": "https://drive.google.com/file/d/1nkRSJwNA1FIoLCrP9yE9BCVaV1a73Tzj/view?usp=drive_link",
         "CPC": "https://drive.google.com/file/d/1c0WObYpi0PPjRS_r4wVmpeAhxZyw0X0G/view?usp=drive_link",
-        "3D Panels": "https://drive.google.com/file/d/1kscAm3rP8zVeM9lIHIDAWDOFCsIrMMLh/view?usp=drive_link",
+        "3D Panels": "https://drive.google.com/file/d/1B5pRYLtBSZpn6dYe0TdioF2ZZ8R5Pi8B/view?usp=drive_link",
         "Designs": "https://drive.google.com/file/d/1LNeHU4vL-hTFk00yT3nexyaw5thEwqa8/view?usp=drive_link",
         "Past Work": "https://drive.google.com/file/d/11Xh3uKRSB5P6sqfWi1nqIEJyJ9ZPXBZJ/view?usp=drive_link"
     }
