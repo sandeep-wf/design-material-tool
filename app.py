@@ -44,6 +44,7 @@ try:
 except Exception as e:
     st.error(f"Error: {e}"); st.stop()
 
+# Secure Initialization of Session States
 if "cart" not in st.session_state: st.session_state.cart = []
 if "page" not in st.session_state: st.session_state.page = "design_select"
 if "pdf_ready" not in st.session_state: st.session_state.pdf_ready = False
@@ -56,7 +57,7 @@ def display_header():
     total_items = sum(item['qty'] for item in st.session_state.cart)
     if st.session_state.page == "cart":
         col1, col2 = st.columns([1, 1])
-        if col1.button("Home", key="top_home_btn"): 
+        if col1.button("Home", key="top_home_btn"):
             st.session_state.cart = []
             st.session_state.page = "design_select"
             st.session_state.pdf_ready = False
@@ -106,7 +107,7 @@ elif st.session_state.page == "design_select":
         filtered = df_material[df_material.apply(lambda x: q.lower() in str(x.get('material_name','')).lower() or q.lower() in str(x.get('material_crm_code','')).lower(), axis=1)]
         mat = st.selectbox("Results", ["-- Select --"] + filtered.apply(lambda x: f"{x['material_name']} ({x['material_crm_code']})", axis=1).tolist())
         if mat != "-- Select --":
-            st.session_state.selected_material_id = mat.split("(")[-1].strip(")")
+            st.session_state.selected_material_id = mat.split('(')[-1].strip(')')
             st.session_state.selected_design = None
             st.session_state.selected_design_name = "Single Selection"
             st.session_state.manual_entry_data = None
@@ -192,13 +193,12 @@ elif st.session_state.page == "cart":
             try: pdf.image('wakefit logo.png', x=175, y=10, w=25)
             except: pass
             pdf.cell(190, 10, "Wakefit Quotation", 0, 1, "C"); pdf.ln(5); pdf.set_font("Arial", "", 12)
-            pdf.cell(190, 10, f"Customer: {c_name} (Phone: {p_phone})", 0, 1) # Added customer phone next to name
-            pdf.cell(190, 10, f"Partner: {p_name}", 0, 1)
+            pdf.cell(190, 10, f"Customer: {c_name}", 0, 1); pdf.cell(190, 10, f"Partner: {p_name}", 0, 1)
             pdf.cell(190, 10, f"Design: {st.session_state.get('selected_design_name')}", 0, 1); pdf.cell(190, 10, f"Date: {date.today()}", 0, 1); pdf.multi_cell(190, 10, f"Remarks: {remarks}"); pdf.ln(5)
             pdf.set_font("Arial", "B", 12); pdf.cell(100, 10, "Product", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
             pdf.set_font("Arial", "", 10)
             for item in st.session_state.cart:
-                y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f"{item['name']} ({item['id']})", 1); rh = pdf.get_y() - y_pre
+                y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f\"{item['name']} ({item['id']})\", 1); rh = pdf.get_y() - y_pre
                 pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']*item['qty']}", 1, 1, "C")
 
             pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Items Subtotal", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{gt:,.2f}", 1, 1, "C")
@@ -207,16 +207,9 @@ elif st.session_state.page == "cart":
             pdf.set_font("Arial", "", 10); pdf.cell(155, 10, "Delivery Charges", 1, 0, "R"); pdf.cell(35, 10, "Rs.1,000.00", 1, 1, "C")
             pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Final Amount", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{ft:,.2f}", 1, 1, "C")
 
-            # Embed the payment QR code image next to disclaimer points
-            y_disclaimer = pdf.get_y()
-            pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.cell(190, 10, "Disclaimer & Payment Details:", 0, 1); pdf.set_font("Arial", "", 10)
-            disclaimer = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for query.", "5: Please scan the QR code to pay a 50% advance for confirmation."]
-            for d in disclaimer: pdf.multi_cell(120, 7, d)
-
-            try:
-                pdf.image('/content/Wakefit.jpeg', x=140, y=y_disclaimer+10, w=45)
-            except Exception as e:
-                pass
+            pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.cell(190, 10, "Disclaimer:", 0, 1); pdf.set_font("Arial", "", 10)
+            disclaimer = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
+            for d in disclaimer: pdf.multi_cell(190, 7, d)
 
             if files:
                 pdf.ln(5); pdf.cell(190, 10, "Reference Images:", 0, 1)
@@ -238,7 +231,6 @@ elif st.session_state.page == "cart":
             else:
                 with st.spinner("Sending to WhatsApp..."):
                     try:
-                        # WhatsApp delivery to primary user
                         up_url = "https://media.smsgupshup.com/GatewayAPI/rest"
                         payload = {'method': 'UploadMedia', 'media_type': 'document', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot'}
                         files_api = [('media_file', ('quotation.pdf', open('q.pdf', 'rb'), 'application/pdf'))]
@@ -249,12 +241,6 @@ elif st.session_state.page == "cart":
                             headers = {'Content-Type': 'application/x-www-form-urlencoded'}
                             data = {'method': 'SENDMEDIAMESSAGE', 'send_to': p_phone, 'msg_type': 'DOCUMENT', 'isHSM': 'true', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot', 'media_id': mid, 'filename': 'Wakefit Wall Makeover Quotation.pdf', 'whatsAppTemplateId': '2216484149134300', 'var1': st.session_state.pdf_customer, 'var2': st.session_state.final_amt_str}
                             r2 = requests.post(send_url, headers=headers, data=data)
-                            
-                            # WhatsApp CC developer delivery to 8700818793
-                            data_cc = data.copy()
-                            data_cc['send_to'] = '8700818793'
-                            requests.post(send_url, headers=headers, data=data_cc)
-
                             if r2.status_code == 200: st.success("Quotation shared successfully!")
                             else: st.error("API send error.")
                         else: st.error("Upload failed.")
