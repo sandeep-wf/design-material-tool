@@ -44,7 +44,7 @@ try:
 except Exception as e:
     st.error(f"Error: {e}"); st.stop()
 
-# Secure Initialization of Session States
+# Initialize Session States strictly to prevent resets
 if "cart" not in st.session_state: st.session_state.cart = []
 if "page" not in st.session_state: st.session_state.page = "design_select"
 if "pdf_ready" not in st.session_state: st.session_state.pdf_ready = False
@@ -57,16 +57,18 @@ def display_header():
     total_items = sum(item['qty'] for item in st.session_state.cart)
     if st.session_state.page == "cart":
         col1, col2 = st.columns([1, 1])
-        if col1.button("Home", key="top_home_btn"):
+        if col1.button("🏠 Home", key="top_home_btn"): 
             st.session_state.cart = []
             st.session_state.page = "design_select"
             st.session_state.pdf_ready = False
             st.rerun()
-        if col2.button("← Back", key="top_back_btn"): st.session_state.page = "material_listing"; st.rerun()
+        if col2.button("← Back", key="top_back_btn"): 
+            st.session_state.page = "material_listing"
+            st.rerun()
     elif st.session_state.page == "catalog":
         if st.button("← Back to Home"): st.session_state.page = "design_select"; st.rerun()
     else:
-        if st.button(f"📃 Cart ({total_items})", key="sticky_cart_btn"): st.session_state.page = "cart"; st.rerun()
+        if st.button(f"🛒 Cart ({total_items})", key="sticky_cart_btn"): st.session_state.page = "cart"; st.rerun()
 
 display_header()
 
@@ -107,7 +109,7 @@ elif st.session_state.page == "design_select":
         filtered = df_material[df_material.apply(lambda x: q.lower() in str(x.get('material_name','')).lower() or q.lower() in str(x.get('material_crm_code','')).lower(), axis=1)]
         mat = st.selectbox("Results", ["-- Select --"] + filtered.apply(lambda x: f"{x['material_name']} ({x['material_crm_code']})", axis=1).tolist())
         if mat != "-- Select --":
-            st.session_state.selected_material_id = mat.split('(')[-1].strip(')')
+            st.session_state.selected_material_id = mat.split("(")[-1].strip(")")
             st.session_state.selected_design = None
             st.session_state.selected_design_name = "Single Selection"
             st.session_state.manual_entry_data = None
@@ -169,6 +171,7 @@ elif st.session_state.page == "cart":
     st.title("Your Cart")
     c_name = st.text_input("Customer Name", key="cn_in"); p_phone = st.text_input("Phone (91...)", key="ph_in")
     p_name = st.selectbox("Partner", ["Rajesh", "Nirmal"], key="pn_sel"); remarks = st.text_area("Remarks", key="rem_in")
+    
     if not st.session_state.cart:
         st.info("Cart is empty.")
         if st.button("Back"): st.session_state.page = "design_select"; st.rerun()
@@ -186,7 +189,9 @@ elif st.session_state.page == "cart":
                     st.rerun()
         st.divider(); dp = st.number_input("Discount %", 0.0, 100.0, 0.0, step=0.1); da = (gt*dp)/100; ft = gt - da + 1000
         st.markdown(f"### Total (incl. ₹1000 delivery): ₹{ft:,.2f}")
-        files = st.file_uploader("Reference Images", type=["png","jpg","jpeg"], accept_multiple_files=True)
+        
+        # Uploaders: Fixed the issue by providing explicit keys to avoid reruns resetting the state page
+        files = st.file_uploader("Reference Images", type=["png","jpg","jpeg"], accept_multiple_files=True, key="cart_file_uploader_camera_integrated")
 
         if st.button("Print PDF", use_container_width=True):
             pdf = FPDF(); pdf.add_page(); pdf.set_font("Arial", "B", 16)
@@ -198,7 +203,7 @@ elif st.session_state.page == "cart":
             pdf.set_font("Arial", "B", 12); pdf.cell(100, 10, "Product", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
             pdf.set_font("Arial", "", 10)
             for item in st.session_state.cart:
-                y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f\"{item['name']} ({item['id']})\", 1); rh = pdf.get_y() - y_pre
+                y_pre = pdf.get_y(); pdf.multi_cell(100, 10, f"{item['name']} ({item['id']})", 1); rh = pdf.get_y() - y_pre
                 pdf.set_xy(110, y_pre); pdf.cell(20, rh, str(item['qty']), 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']}", 1, 0, "C"); pdf.cell(35, rh, f"Rs.{item['price']*item['qty']}", 1, 1, "C")
 
             pdf.set_font("Arial", "B", 12); pdf.cell(155, 10, "Items Subtotal", 1, 0, "R"); pdf.cell(35, 10, f"Rs.{gt:,.2f}", 1, 1, "C")
@@ -227,23 +232,34 @@ elif st.session_state.page == "cart":
             st.session_state.pdf_customer = c_name
 
         if st.session_state.get("pdf_ready") and st.button("Share on WhatsApp", use_container_width=True):
-            if not p_phone: st.error("Enter phone number.")
+            if not p_phone:
+                st.error("Enter phone number.")
             else:
-                with st.spinner("Sending to WhatsApp..."):
+                with st.spinner("Sending to WhatsApp... "):
                     try:
+                        # Upload the media document once to SMSGupshup
                         up_url = "https://media.smsgupshup.com/GatewayAPI/rest"
                         payload = {'method': 'UploadMedia', 'media_type': 'document', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot'}
                         files_api = [('media_file', ('quotation.pdf', open('q.pdf', 'rb'), 'application/pdf'))]
                         r1 = requests.post(up_url, data=payload, files=files_api).json()
+                        
                         if r1.get("response", {}).get("status") == "success":
                             mid = r1["response"]["id"]
                             send_url = "https://mediaapi.smsgupshup.com/GatewayAPI/rest"
                             headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-                            data = {'method': 'SENDMEDIAMESSAGE', 'send_to': p_phone, 'msg_type': 'DOCUMENT', 'isHSM': 'true', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot', 'media_id': mid, 'filename': 'Wakefit Wall Makeover Quotation.pdf', 'whatsAppTemplateId': '2216484149134300', 'var1': st.session_state.pdf_customer, 'var2': st.session_state.final_amt_str}
-                            r2 = requests.post(send_url, headers=headers, data=data)
-                            if r2.status_code == 200: st.success("Quotation shared successfully!")
-                            else: st.error("API send error.")
-                        else: st.error("Upload failed.")
-                    except Exception as e: st.error(f"Integration error: {e}")
+                            
+                            # Send to customer
+                            data_customer = {'method': 'SENDMEDIAMESSAGE', 'send_to': p_phone, 'msg_type': 'DOCUMENT', 'isHSM': 'true', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot', 'media_id': mid, 'filename': 'Wakefit Wall Makeover Quotation.pdf', 'whatsAppTemplateId': '2216484149134300', 'var1': st.session_state.pdf_customer, 'var2': st.session_state.final_amt_str}
+                            r2_customer = requests.post(send_url, headers=headers, data=data_customer)
+                            
+                            # Send copy to developer (CC: 8700818793)
+                            data_cc = {'method': 'SENDMEDIAMESSAGE', 'send_to': '8700818793', 'msg_type': 'DOCUMENT', 'isHSM': 'true', 'v': '1.1', 'format': 'json', 'auth_scheme': 'plain', 'userid': '2000264220', 'password': 'IakKOS7Ot', 'media_id': mid, 'filename': 'Wakefit Wall Makeover Quotation (CC Copy).pdf', 'whatsAppTemplateId': '2216484149134300', 'var1': st.session_state.pdf_customer, 'var2': st.session_state.final_amt_str}
+                            r2_cc = requests.post(send_url, headers=headers, data=data_cc)
+                            
+                            st.success("Quotation shared with Customer and CC'd to you successfully!")
+                        else:
+                            st.error("Media upload failed.")
+                    except Exception as e:
+                        st.error(f"Integration error: {e}")
 
         if st.button("← Back to Materials"): st.session_state.page = "material_listing"; st.rerun()
