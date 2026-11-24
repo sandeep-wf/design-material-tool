@@ -198,7 +198,7 @@ elif st.session_state.page == "cart":
             try: pdf.image('wakefit logo.png', x=175, y=10, w=25)
             except: pass
             pdf.cell(190, 10, "Wakefit Quotation", 0, 1, "C"); pdf.ln(5); pdf.set_font("Arial", "", 12)
-            pdf.cell(190, 10, f"Customer: {c_name}", 0, 1); pdf.cell(190, 10, f"Partner: {p_name}", 0, 1)
+            pdf.cell(190, 10, f"Customer: {c_name}", 0, 1); pdf.cell(190, 10, f"Mobile: {p_phone}", 0, 1); pdf.cell(190, 10, f"Partner: {p_name}", 0, 1)
             pdf.cell(190, 10, f"Design: {st.session_state.get('selected_design_name')}", 0, 1); pdf.cell(190, 10, f"Date: {date.today()}", 0, 1); pdf.multi_cell(190, 10, f"Remarks: {remarks}"); pdf.ln(5)
             pdf.set_font("Arial", "B", 12); pdf.cell(100, 10, "Product", 1); pdf.cell(20, 10, "Qty", 1, 0, "C"); pdf.cell(35, 10, "Price", 1, 0, "C"); pdf.cell(35, 10, "Total", 1, 1, "C")
             pdf.set_font("Arial", "", 10)
@@ -215,6 +215,15 @@ elif st.session_state.page == "cart":
             pdf.ln(5); pdf.set_font("Arial", "B", 11); pdf.cell(190, 10, "Disclaimer:", 0, 1); pdf.set_font("Arial", "", 10)
             disclaimer = ["1: It is not an invoice, Invoice will be shared after payment and installation.", "2: The quotes shared are valid for 15 days.", "3: Discount is valid only for 3 days.", "4: Please reach out to us on whatsapp at +91-9071079479 for the installation or any customer query"]
             for d in disclaimer: pdf.multi_cell(190, 7, d)
+            
+            # Embed payment QR code below disclaimer
+            try:
+                pdf.ln(5)
+                pdf.set_font("Arial", "B", 11)
+                pdf.cell(190, 10, "Scan QR to Pay 50% Advance:", 0, 1)
+                pdf.image('Wakefit.jpeg', x=10, w=80)
+            except Exception as e:
+                pass
 
             if files:
                 pdf.ln(5); pdf.cell(190, 10, "Reference Images:", 0, 1)
